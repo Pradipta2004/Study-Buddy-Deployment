@@ -7,7 +7,10 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 export const config = {
   api: {
     bodyParser: false,
+    responseLimit: '10mb',
+    externalResolver: true,
   },
+  maxDuration: 300, // 5 minutes for Gemini processing
 };
 
 interface PDFMetadata {
@@ -324,16 +327,31 @@ ${patternSection ? '>>> PRIORITY 1: PATTERN MATCHING <<<\n' + patternSection + '
 ${pdfText}
 ${patternSection ? '' : '\n\nPlease generate high-quality ' + subject + ' questions based on this content.' + questionBreakdown}
 
-${patternText ? '\n\n>>> GENERATION INSTRUCTIONS <<<\n\nYou MUST:\n1. Extract the EXACT LaTeX structure from the pattern above\n2. Keep ALL formatting elements: \\\\documentclass, \\\\usepackage, \\\\geometry, headers, footers, boxes, tables, rules\n3. Maintain the EXACT question numbering and section format\n4. Match the mark distribution precisely\n5. Generate NEW questions (from the content PDF) that fit this EXACT format\n6. Use the same spacing, fonts, and layout\n7. Include solutions in the SAME format as shown in pattern (if pattern has solutions)\n\nYour output should be ready-to-compile LaTeX that looks IDENTICAL to the pattern but with new questions from the content.' : 'Question Requirements:\n- Question types: ' + questionTypeDesc + '\n- Difficulty level: ' + difficulty + '\n- Each question should be clear and well-formatted\n- Provide detailed step-by-step solutions\n- Use proper LaTeX notation for all mathematical expressions' + customInstructionsSection}
-
 ${patternText ? '\n\n>>> GENERATION INSTRUCTIONS <<<\n\nYou MUST:\n1. Extract the EXACT LaTeX structure from the pattern above\n2. Keep ALL formatting elements: \\\\documentclass, \\\\usepackage, \\\\geometry, headers, footers, boxes, tables, rules\n3. Maintain the EXACT question numbering and section format\n4. Match the mark distribution precisely\n5. Generate NEW questions (from the content PDF) that fit this EXACT format\n6. Use the same spacing, fonts, and layout\n7. Include solutions in the SAME format as shown in pattern (if pattern has solutions)\n\nYour output should be ready-to-compile LaTeX that looks IDENTICAL to the pattern but with new questions from the content.' : 'Question Requirements:\n- Question types: ' + questionTypeDesc + '\n- Difficulty level: ' + difficulty + '\n- Each question should be clear and well-formatted\n- Provide detailed step-by-step solutions\n- Use proper LaTeX notation for all mathematical expressions' + customInstructionsSection + '\n\nFormat your response ENTIRELY in LaTeX using this EXACT structure for a proper exam paper:'}
 
 ${patternSection ? '' : '\n\\documentclass[12pt,a4paper]{article}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n\\usepackage{geometry}\n\\usepackage{enumitem}\n\\usepackage{fancyhdr}\n\\usepackage{graphicx}\n\\geometry{margin=0.75in, top=1in, bottom=1in}\n\n\\pagestyle{fancy}\n\\fancyhf{}\n\\fancyhead[L]{\\textbf{' + subject.charAt(0).toUpperCase() + subject.slice(1) + ' Examination}}\n\\fancyhead[R]{\\textbf{Page \\thepage}}\n\\fancyfoot[C]{\\small All questions carry marks as indicated}\n\n\\begin{document}\n\n% Header Section\n\\begin{center}\n{\\Large \\textbf{EXAMINATION PAPER}}\\\\[0.3cm]\n{\\large \\textbf{Subject: ' + subject.charAt(0).toUpperCase() + subject.slice(1) + '}}\\\\[0.2cm]\n{\\textbf{Difficulty Level: ' + difficulty.charAt(0).toUpperCase() + difficulty.slice(1) + '}}\\\\[0.2cm]\n\\rule{\\textwidth}{0.4pt}\n\\end{center}\n\n\\vspace{0.3cm}\n\n% Instructions Box\n\\noindent\\fbox{\\parbox{\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule}{\n\\textbf{INSTRUCTIONS TO CANDIDATES:}\\\\[0.2cm]\n\\begin{itemize}[leftmargin=*, itemsep=0pt]\n\\item Read all questions carefully before attempting.\n\\item Answer all questions in the space provided or on separate sheets.\n\\item Show all working for full credit.\n\\item Marks for each question are indicated in brackets.\n\\item Use of calculator is permitted (if applicable).\n' + (questionBreakdown ? '\\item ' + questionBreakdown.replace(/\n/g, '\n\\item ').replace('1 Mark Questions:', '\\textbf{Section A:} 1 Mark Questions').replace('Questions by Marks:', '\\textbf{Section B:} Higher Mark Questions') : '') + '\n\\end{itemize}\n}}\n\n\\vspace{0.5cm}\n\n% Questions Section\n\\section*{QUESTIONS}\n\n[Now generate each question using this EXACT format:\n\n\\subsection*{Question 1 [X marks]}\n[Question text with proper LaTeX math formatting]\n\n\\subsection*{Solution}\n[Detailed solution with step-by-step explanation]\n\n\\vspace{0.5cm}\n\nRepeat for all questions, ensuring proper numbering and mark allocation.]\n\n\\end{document}\n\nCRITICAL FORMATTING REQUIREMENTS:\n- Use \\subsection*{Question N [X marks]} for each question header\n- Use \\subsection*{Solution} for each solution\n- Use $...$ for inline math and $$...$$ or \\[...\\] for display math\n- For MCQs: Use (a), (b), (c), (d) format\n- For Fill in Blanks: Use \\underline{\\hspace{3cm}} for blanks\n- Add \\vspace{0.5cm} between questions for spacing\n- Make questions relevant to the provided content\n- STRICTLY follow the custom instructions if provided\n- Number questions consecutively starting from 1'}
 `;
 
-  const result = await model.generateContent(prompt);
+  console.log('Sending request to Gemini API...');
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Gemini API request timed out after 4 minutes')), 240000);
+  });
+
+  const result = await Promise.race([
+    model.generateContent(prompt),
+    timeoutPromise
+  ]);
+  
   const response = await result.response;
-  return response.text();
+  const responseText = response.text();
+  
+  console.log('Received response from Gemini. Length:', responseText.length);
+  
+  if (!responseText || responseText.trim().length === 0) {
+    throw new Error('Gemini returned empty response');
+  }
+  
+  return responseText;
 }
 
 export default async function handler(
@@ -428,7 +446,17 @@ export default async function handler(
         }
 
         // Generate questions using Gemini
-        let latexContent = await generateQuestionsWithGemini(pdfText, metadata, patternText);
+        let latexContent = '';
+        try {
+          latexContent = await generateQuestionsWithGemini(pdfText, metadata, patternText);
+        } catch (geminiError: any) {
+          console.error('Gemini API error:', geminiError);
+          throw new Error(`AI generation failed: ${geminiError.message || 'Unknown error'}`);
+        }
+
+        if (!latexContent || latexContent.trim().length === 0) {
+          throw new Error('AI generated empty content');
+        }
         
         // Extract LaTeX from AI response - handle multiple formats
         // 1. Remove any conversational text before the LaTeX
@@ -454,6 +482,11 @@ export default async function handler(
         
         // Trim any remaining whitespace
         latexContent = latexContent.trim();
+
+        if (!latexContent.includes('\\documentclass')) {
+          console.error('Invalid LaTeX content. First 500 chars:', latexContent.substring(0, 500));
+          throw new Error('Generated content is not valid LaTeX');
+        }
 
         // Clean up uploaded files
         if (fs.existsSync(filePath)) {

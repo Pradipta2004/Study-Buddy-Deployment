@@ -130,10 +130,33 @@ export default function Home() {
         body: formData,
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || 'Upload failed');
+        const text = await response.text();
+        let errorMessage = 'Upload failed';
+        try {
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          errorMessage = text || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      const text = await response.text();
+      if (!text) {
+        throw new Error('Empty response from server');
+      }
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error('JSON parse error. Response text:', text.substring(0, 500));
+        throw new Error('Invalid response from server. Please check server logs.');
+      }
+
+      if (!data.latex) {
+        throw new Error('No LaTeX content received from server');
       }
 
       setLatexContent(data.latex);
