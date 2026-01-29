@@ -57,10 +57,10 @@ const SUBJECTS = [
 ];
 
 const DIFFICULTIES = [
-  { value: 'easy', label: '🟢 Easy' },
-  { value: 'medium', label: '🟡 Medium' },
-  { value: 'hard', label: '🔴 Hard' },
-  { value: 'mixed', label: '🎯 Mixed' },
+  { value: 'easy', label: '🟢 easy' },
+  { value: 'medium', label: '🟡 moderate' },
+  { value: 'hard', label: '🔴 difficult' },
+  //{ value: 'mixed', label: '🎯 mixed' },
 ];
 
 const CLASSES = [
@@ -184,21 +184,83 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
     </div>
   );
 
+  const [errorMessages, setErrorMessages] = useState<{ [key: string]: string }>({});
+  const MAX_QUESTIONS_BY_TYPE = 20;
+  const MAX_QUESTIONS_BY_MARKS = 20;
+
   const handleQuestionTypeCountChange = (type: keyof NonNullable<QuestionConfig['questionsByType']>, delta: number) => {
     const current = config.questionsByType || { mcq: 0, fillInBlanks: 0, trueFalse: 0, general: 0 };
-    const newValue = Math.max(0, (current[type] || 0) + delta);
+    let newValue = Math.max(0, (current[type] || 0) + delta);
+    
+    const newErrors = { ...errorMessages };
+    if (newValue > MAX_QUESTIONS_BY_TYPE) {
+      newValue = MAX_QUESTIONS_BY_TYPE;
+      newErrors[type] = `Max ${MAX_QUESTIONS_BY_TYPE} questions allowed`;
+    } else {
+      delete newErrors[type];
+    }
+    setErrorMessages(newErrors);
+    
     onConfigChange({
       ...config,
       questionsByType: { ...current, [type]: newValue }
     });
   };
 
+  const handleQuestionTypeInputChange = (type: keyof NonNullable<QuestionConfig['questionsByType']>, value: string) => {
+    const numValue = parseInt(value) || 0;
+    let finalValue = Math.max(0, numValue);
+    
+    const newErrors = { ...errorMessages };
+    if (finalValue > MAX_QUESTIONS_BY_TYPE) {
+      finalValue = MAX_QUESTIONS_BY_TYPE;
+      newErrors[type] = `Max ${MAX_QUESTIONS_BY_TYPE} questions allowed`;
+    } else {
+      delete newErrors[type];
+    }
+    setErrorMessages(newErrors);
+    
+    onConfigChange({
+      ...config,
+      questionsByType: { ...config.questionsByType || { mcq: 0, fillInBlanks: 0, trueFalse: 0, general: 0 }, [type]: finalValue }
+    });
+  };
+
   const handleQuestionMarkCountChange = (marks: keyof NonNullable<QuestionConfig['questionsByMarks']>, delta: number) => {
     const current = config.questionsByMarks || { '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '10': 0 };
-    const newValue = Math.max(0, (current[marks] || 0) + delta);
+    let newValue = Math.max(0, (current[marks] || 0) + delta);
+    
+    const newErrors = { ...errorMessages };
+    if (newValue > MAX_QUESTIONS_BY_MARKS) {
+      newValue = MAX_QUESTIONS_BY_MARKS;
+      newErrors[`marks_${marks}`] = `Max ${MAX_QUESTIONS_BY_MARKS} questions allowed`;
+    } else {
+      delete newErrors[`marks_${marks}`];
+    }
+    setErrorMessages(newErrors);
+    
     onConfigChange({
       ...config,
       questionsByMarks: { ...current, [marks]: newValue }
+    });
+  };
+
+  const handleQuestionMarkInputChange = (marks: keyof NonNullable<QuestionConfig['questionsByMarks']>, value: string) => {
+    const numValue = parseInt(value) || 0;
+    let finalValue = Math.max(0, numValue);
+    
+    const newErrors = { ...errorMessages };
+    if (finalValue > MAX_QUESTIONS_BY_MARKS) {
+      finalValue = MAX_QUESTIONS_BY_MARKS;
+      newErrors[`marks_${marks}`] = `Max ${MAX_QUESTIONS_BY_MARKS} questions allowed`;
+    } else {
+      delete newErrors[`marks_${marks}`];
+    }
+    setErrorMessages(newErrors);
+    
+    onConfigChange({
+      ...config,
+      questionsByMarks: { ...config.questionsByMarks || { '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '10': 0 }, [marks]: finalValue }
     });
   };
 
@@ -214,7 +276,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
 
   const renderCustomizeOptions = () => (
     <div className="animate-fadeIn space-y-4">
-      <h3 className="text-lg font-bold text-gray-800 mb-4">Configure Questions</h3>
+      <h3 className="text-lg font-bold text-gray-800 mb-4">⚙️ Question Configuration</h3>
       
       {/* Question Types */}
       <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 space-y-3">
@@ -229,25 +291,35 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
             { key: 'fillInBlanks' as const, label: 'Fill in the Blanks' },
             { key: 'general' as const, label: 'Short Answer Type' }
           ].map(item => (
-            <div key={item.key} className="flex items-center justify-between bg-white p-2 rounded border border-blue-100">
-              <span className="font-medium text-gray-700 text-xs">{item.label}</span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handleQuestionTypeCountChange(item.key, -1)}
-                  className="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
-                >
-                  −
-                </button>
-                <span className="w-5 text-center text-xs font-bold text-gray-800">
-                  {config.questionsByType?.[item.key] || 0}
-                </span>
-                <button
-                  onClick={() => handleQuestionTypeCountChange(item.key, 1)}
-                  className="w-6 h-6 bg-blue-600 hover:bg-blue-700 rounded text-xs font-bold text-white"
-                >
-                  +
-                </button>
+            <div key={item.key}>
+              <div className="flex items-center justify-between bg-white p-2 rounded border border-blue-100">
+                <span className="font-medium text-gray-700 text-xs flex-1">{item.label}</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleQuestionTypeCountChange(item.key, -1)}
+                    className="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    max={MAX_QUESTIONS_BY_TYPE}
+                    value={config.questionsByType?.[item.key] || 0}
+                    onChange={(e) => handleQuestionTypeInputChange(item.key, e.target.value)}
+                    className="w-10 text-center text-xs font-bold text-gray-800 border border-gray-300 rounded px-1 py-0.5"
+                  />
+                  <button
+                    onClick={() => handleQuestionTypeCountChange(item.key, 1)}
+                    className="w-6 h-6 bg-blue-600 hover:bg-blue-700 rounded text-xs font-bold text-white"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
+              {errorMessages[item.key] && (
+                <p className="text-xs text-red-600 mt-1 px-2">⚠️ {errorMessages[item.key]}</p>
+              )}
             </div>
           ))}
         </div>
@@ -268,25 +340,35 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
             { key: '6' as const, label: '6' },
             { key: '10' as const, label: '10' }
           ].map(item => (
-            <div key={item.key} className="flex items-center justify-between bg-white p-2 rounded border border-green-100">
-              <span className="font-medium text-gray-700 text-xs">{item.label}m</span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => handleQuestionMarkCountChange(item.key, -1)}
-                  className="w-5 h-5 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
-                >
-                  −
-                </button>
-                <span className="w-4 text-center text-xs font-bold text-gray-800">
-                  {config.questionsByMarks?.[item.key] || 0}
-                </span>
-                <button
-                  onClick={() => handleQuestionMarkCountChange(item.key, 1)}
-                  className="w-5 h-5 bg-green-600 hover:bg-green-700 rounded text-xs font-bold text-white"
-                >
-                  +
-                </button>
+            <div key={item.key}>
+              <div className="flex items-center justify-between bg-white p-2 rounded border border-green-100">
+                <span className="font-medium text-gray-700 text-xs">{item.label}m</span>
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => handleQuestionMarkCountChange(item.key, -1)}
+                    className="w-5 h-5 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    max={MAX_QUESTIONS_BY_MARKS}
+                    value={config.questionsByMarks?.[item.key] || 0}
+                    onChange={(e) => handleQuestionMarkInputChange(item.key, e.target.value)}
+                    className="w-8 text-center text-xs font-bold text-gray-800 border border-gray-300 rounded px-0.5 py-0.5"
+                  />
+                  <button
+                    onClick={() => handleQuestionMarkCountChange(item.key, 1)}
+                    className="w-5 h-5 bg-green-600 hover:bg-green-700 rounded text-xs font-bold text-white"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
+              {errorMessages[`marks_${item.key}`] && (
+                <p className="text-xs text-red-600 mt-0.5 px-2">⚠️ {errorMessages[`marks_${item.key}`]}</p>
+              )}
             </div>
           ))}
         </div>

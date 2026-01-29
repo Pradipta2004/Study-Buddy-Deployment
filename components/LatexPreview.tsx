@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 interface Props {
   content: string;
+  onQuestionsLoaded?: (questions: Array<{ number: number; question: string; solution: string }>) => void;
 }
 
 interface Question {
@@ -12,7 +13,7 @@ interface Question {
   solution: string;
 }
 
-export default function LatexPreview({ content }: Props) {
+export default function LatexPreview({ content, onQuestionsLoaded }: Props) {
   const previewRef = useRef<HTMLDivElement>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [visibleSolutions, setVisibleSolutions] = useState<Set<number>>(new Set());
@@ -162,12 +163,15 @@ export default function LatexPreview({ content }: Props) {
       }
 
       setQuestions(uniqueQuestions);
+      if (onQuestionsLoaded) {
+        onQuestionsLoaded(uniqueQuestions);
+      }
     };
 
     if (content) {
       parseQuestions();
     }
-  }, [content]);
+  }, [content, onQuestionsLoaded]);
 
   useEffect(() => {
     if (previewRef.current && typeof window !== 'undefined' && questions.length > 0) {
@@ -366,18 +370,6 @@ export default function LatexPreview({ content }: Props) {
                     </span>
                     <span className="truncate">Q{q.number}</span>
                   </h2>
-                  {q.solution && (
-                    <button
-                      onClick={() => toggleSolution(q.number)}
-                      className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-semibold transition-all flex-shrink-0 ${
-                        visibleSolutions.has(q.number)
-                          ? 'bg-white text-purple-600 hover:bg-purple-50'
-                          : 'bg-purple-700 text-white hover:bg-purple-800'
-                      }`}
-                    >
-                      {visibleSolutions.has(q.number) ? '▼ Hide' : '► Solution'}
-                    </button>
-                  )}
                 </div>
 
                 {/* Question Content */}
@@ -399,6 +391,22 @@ export default function LatexPreview({ content }: Props) {
                       />
                     </div>
                   </>
+                )}
+
+                {/* Solution Button - At the End */}
+                {q.solution && (
+                  <div className="bg-gray-50 border-t border-gray-200 p-3 flex justify-end">
+                    <button
+                      onClick={() => toggleSolution(q.number)}
+                      className={`px-3 py-1 rounded text-xs sm:text-sm font-semibold transition-all ${
+                        visibleSolutions.has(q.number)
+                          ? 'bg-white text-purple-600 hover:bg-purple-50 border border-purple-300'
+                          : 'bg-purple-600 text-white hover:bg-purple-700'
+                      }`}
+                    >
+                      {visibleSolutions.has(q.number) ? '▼ Hide Solution' : '► View Solution'}
+                    </button>
+                  </div>
                 )}
 
                 {/* Divider */}

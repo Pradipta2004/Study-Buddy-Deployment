@@ -26,6 +26,35 @@ interface QuestionConfig {
   };
 }
 
+const MOTIVATIONAL_QUOTES = [
+  "Every question is a chance to learn something new! 🌟",
+  "Your hard work today is your success tomorrow! 💪",
+  "Stay focused and ace this test! 🎯",
+  "Believe in yourself, you've got this! 🌈",
+  "Progress is progress, no matter how small! ✨",
+  "Knowledge is the greatest treasure! 💎",
+  "You are capable of amazing things! 🚀",
+  "Excellence comes from practice and patience! 📚",
+  "Your potential is limitless! 🎆",
+  "Every mistake is a learning opportunity! 🧠",
+  "Confidence comes from preparation! 💡",
+  "You're stronger than you think! 💫",
+  "Success is earned, not given! 🏆",
+  "Keep pushing, you're almost there! 🎉",
+  "Your effort will pay off! 🌟",
+  "The best version of you is yet to come! 🌺",
+  "Learning today leads to success tomorrow! 📖",
+  "You've got the power to succeed! ⚡",
+  "Never underestimate your abilities! 🌟",
+  "Your dedication will take you far! 🛤️",
+];
+
+const EXAM_QUOTES = [
+  "You've prepared well. Trust yourself! 🎓",
+  "Take a deep breath. You can do this! 💫",
+  "Success is yours for the taking! 🏅",
+];
+
 export default function Home() {
   const [started, setStarted] = useState(false);
   const [mode, setMode] = useState<'pattern' | 'custom' | null>(null);
@@ -35,6 +64,9 @@ export default function Home() {
   const [error, setError] = useState('');
   const [latexContent, setLatexContent] = useState('');
   const [isFromPattern, setIsFromPattern] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [currentQuote, setCurrentQuote] = useState('');
+  const [generationComplete, setGenerationComplete] = useState(false);
   const [config, setConfig] = useState<QuestionConfig>({
     subject: 'mathematics',
     questionTypes: ['problem-solving', 'conceptual'],
@@ -42,8 +74,12 @@ export default function Home() {
     studentClass: '10',
   });
   const [isDragging, setIsDragging] = useState(false);
+  const [showCompleteSolutions, setShowCompleteSolutions] = useState(false);
+  const [allQuestions, setAllQuestions] = useState<Array<{ number: number; question: string; solution: string }>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const patternFileInputRef = useRef<HTMLInputElement>(null);
+  const quoteIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -100,9 +136,27 @@ export default function Home() {
     }
 
     setLoading(true);
+    setGenerationComplete(false);
     setError('');
     setLatexContent('');
-    setIsFromPattern(!!patternFile); // Track if pattern was uploaded
+    setIsFromPattern(!!patternFile);
+    setLoadingProgress(0);
+
+    // Start quote rotation
+    setCurrentQuote(MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]);
+    if (quoteIntervalRef.current) clearInterval(quoteIntervalRef.current);
+    quoteIntervalRef.current = setInterval(() => {
+      setCurrentQuote(MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]);
+    }, 3000);
+
+    // Start progress animation
+    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    let progress = 0;
+    progressIntervalRef.current = setInterval(() => {
+      progress += Math.random() * 25;
+      if (progress > 90) progress = 90;
+      setLoadingProgress(Math.min(progress, 90));
+    }, 500);
 
     try {
       const formData = new FormData();
@@ -163,11 +217,15 @@ export default function Home() {
         throw new Error('No LaTeX content received from server');
       }
 
+      setLoadingProgress(100);
       setLatexContent(data.latex);
+      setGenerationComplete(true);
     } catch (err: any) {
       setError(err.message || 'An error occurred during upload');
     } finally {
       setLoading(false);
+      if (quoteIntervalRef.current) clearInterval(quoteIntervalRef.current);
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     }
   };
 
@@ -198,6 +256,17 @@ export default function Home() {
     } catch (err: any) {
       setError(err.message || 'Download failed');
     }
+  };
+
+  const handleResetAndGenerateAnother = () => {
+    setLatexContent('');
+    setGenerationComplete(false);
+    setFile(null);
+    setPatternFile(null);
+    setMode(null);
+    setStarted(false);
+    setError('');
+    setLoadingProgress(0);
   };
 
   const handleDownloadPDF = async (includeSolutions: boolean = true) => {
@@ -379,7 +448,7 @@ export default function Home() {
                   <p className="text-base md:text-lg text-gray-700 font-semibold mb-2">
                     {file ? <span className="text-blue-600">{file.name}</span> : 'Drag PDF or click to Upload'}
                   </p>
-                  <p className="text-xs md:text-sm text-gray-500">Max 16MB</p>
+                  <p className="text-xs md:text-sm text-red-600 font-semibold">Max 16MB</p>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -437,50 +506,179 @@ export default function Home() {
             {/* Results Section */}
             {latexContent && (
               <div className="animate-fadeIn">
-                <div className="card p-6 md:p-8 space-y-6">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <h2 className="text-2xl md:text-3xl font-bold text-gray-800">✅ Generated</h2>
-                    <div className="flex gap-2 w-full md:w-auto flex-wrap">
-                      <button
-                        onClick={handleDownloadLatex}
-                        className="btn-secondary flex-1 md:flex-none py-2 md:py-3 px-4 md:px-6 text-sm md:text-base"
-                      >
-                        📥 LaTeX
-                      </button>
-                      <button
-                        onClick={() => handleDownloadPDF(false)}
-                        disabled={loading}
-                        className="btn-secondary flex-1 md:flex-none py-2 md:py-3 px-4 md:px-6 text-sm md:text-base disabled:opacity-50"
-                      >
-                        📄 Questions
-                      </button>
-                      <button
-                        onClick={() => handleDownloadPDF(true)}
-                        disabled={loading}
-                        className="btn-primary flex-1 md:flex-none py-2 md:py-3 px-4 md:px-6 text-sm md:text-base disabled:opacity-50"
-                      >
-                        📚 With Solution
-                      </button>
+                {generationComplete && (
+                  <div className="card p-6 md:p-8 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-400 space-y-6">
+                    <div className="text-center space-y-4">
+                      <div className="text-6xl animate-bounce">🎉</div>
+                      <h2 className="text-3xl md:text-4xl font-bold text-green-700">Thank You!</h2>
+                      <p className="text-lg text-gray-700">Your question paper has been generated successfully!</p>
+                      <p className="text-purple-600 font-semibold italic text-lg">{EXAM_QUOTES[Math.floor(Math.random() * EXAM_QUOTES.length)]}</p>
                     </div>
                   </div>
+                )}
 
-                  {!isFromPattern && <LatexPreview content={latexContent} />}
+                <div className="card p-6 md:p-8 space-y-6 mt-6">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-800">✅ Generated</h2>
+                    {!isFromPattern && allQuestions.length > 0 && (
+                      <button
+                        onClick={() => setShowCompleteSolutions(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-sm"
+                      >
+                        📋 See Complete Solution
+                      </button>
+                    )}
+                  </div>
+
+                  {!isFromPattern && <LatexPreview content={latexContent} onQuestionsLoaded={setAllQuestions} />}
                   {isFromPattern && (
                     <div className="text-center space-y-3 py-8">
                       <div className="text-5xl">✓</div>
                       <p className="text-lg font-bold text-gray-800">Generated Successfully</p>
-                      <p className="text-sm text-gray-600">Download using options above</p>
+                      <p className="text-sm text-gray-600">Download using options below</p>
                     </div>
                   )}
+
+                  {/* Download Buttons - Positioned Below */}
+                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-xl border-2 border-blue-200 space-y-4">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">📥 Download Options</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <button
+                        onClick={() => handleDownloadPDF(false)}
+                        disabled={loading}
+                        className="btn-secondary py-3 px-6 text-base font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        <span>📄</span> Download Questions
+                      </button>
+                      <button
+                        onClick={() => handleDownloadPDF(true)}
+                        disabled={loading}
+                        className="btn-primary py-3 px-6 text-base font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        <span>📚</span> Download With Solutions
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Generate Another Button */}
+                  <div className="text-center pt-4">
+                    <button
+                      onClick={handleResetAndGenerateAnother}
+                      className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 px-8 rounded-xl hover:shadow-lg transition-all text-lg"
+                    >
+                      🔄 Generate Another Question Paper
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Loading Indicator */}
+            {/* Complete Solutions Modal */}
+            {showCompleteSolutions && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl max-w-4xl max-h-[90vh] w-full overflow-y-auto relative">
+                  {/* Close Button */}
+                  <button
+                    onClick={() => setShowCompleteSolutions(false)}
+                    className="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white rounded-full w-10 h-10 flex items-center justify-center z-10 font-bold text-xl"
+                  >
+                    ✕
+                  </button>
+
+                  <div className="p-6 md:p-8 space-y-6">
+                    <div className="text-center mb-6 mt-6">
+                      <h2 className="text-2xl md:text-3xl font-bold text-purple-700">📚 Complete Solutions</h2>
+                      <p className="text-gray-600 mt-2">{allQuestions.length} Questions with Solutions</p>
+                    </div>
+
+                    <div className="space-y-6">
+                      {allQuestions.map((q) => (
+                        <div key={q.number} className="border-2 border-purple-200 rounded-lg overflow-hidden">
+                          {/* Question Header */}
+                          <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-4">
+                            <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                              <span className="bg-white text-purple-600 w-8 h-8 rounded-full flex items-center justify-center font-bold">
+                                {q.number}
+                              </span>
+                              Question {q.number}
+                            </h3>
+                          </div>
+
+                          {/* Question Content */}
+                          <div className="p-4 bg-white border-b border-gray-200">
+                            <p className="text-gray-800 text-sm leading-relaxed">{q.question}</p>
+                          </div>
+
+                          {/* Solution */}
+                          {q.solution && (
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 border-t-2 border-green-300">
+                              <p className="font-bold text-green-700 mb-2">✓ Solution:</p>
+                              <p className="text-gray-800 text-sm leading-relaxed">{q.solution}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Loading Indicator with Progress Bar */}
             {loading && !latexContent && (
-              <div className="card p-12 text-center space-y-4">
-                <div className="inline-block w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                <p className="text-lg text-gray-700 font-semibold">Processing...</p>
+              <div className="card p-12 text-center space-y-8 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 border-2 border-blue-300 relative overflow-hidden">
+                {/* Animated background elements */}
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 animate-pulse"></div>
+                
+                <div className="space-y-6 relative z-10">
+                  <div className="inline-block">
+                    <div className="relative w-24 h-24 mx-auto">
+                      {/* Outer rotating ring */}
+                      <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 border-r-purple-600 animate-spin" style={{ animationDuration: '2s' }}></div>
+                      
+                      {/* Middle rotating ring */}
+                      <div className="absolute inset-2 rounded-full border-4 border-transparent border-b-pink-500 border-l-blue-500 animate-spin" style={{ animationDuration: '3s', animationDirection: 'reverse' }}></div>
+                      
+                      {/* SVG Progress circle */}
+                      <svg className="absolute inset-0 w-24 h-24" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="#e0e7ff" strokeWidth="3" />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          fill="none"
+                          stroke="url(#progressGradient)"
+                          strokeWidth="3"
+                          strokeDasharray={`${2 * Math.PI * 45}`}
+                          strokeDashoffset={`${2 * Math.PI * 45 * (1 - loadingProgress / 100)}`}
+                          strokeLinecap="round"
+                          style={{ transition: 'stroke-dashoffset 0.3s ease' }}
+                        />
+                        <defs>
+                          <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#3b82f6" />
+                            <stop offset="50%" stopColor="#8b5cf6" />
+                            <stop offset="100%" stopColor="#ec4899" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      
+                      {/* Center percentage */}
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center">
+                          <span className="text-xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">{Math.round(loadingProgress)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <p className="text-lg font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Generating your questions...</p>
+                    <div className="min-h-16 flex items-center justify-center">
+                      <p className="text-purple-600 font-semibold italic text-base animate-pulse max-w-md">{currentQuote}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </>
