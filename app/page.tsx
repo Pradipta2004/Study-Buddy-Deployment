@@ -260,7 +260,7 @@ export default function Home() {
           <div className="card p-8 md:p-12 text-center space-y-8 animate-fadeIn">
             <div className="space-y-4">
               <h2 className="text-3xl md:text-5xl font-bold text-gray-800">Welcome</h2>
-              <p className="text-base md:text-lg text-gray-600">Create custom questions from your textbooks instantly</p>
+              <p className="text-base md:text-lg text-gray-600">Create Question Paper from your Textbook Instantly</p>
             </div>
             <button
               onClick={() => setStarted(true)}
@@ -283,7 +283,7 @@ export default function Home() {
                 className="p-8 border-2 border-blue-200 rounded-xl hover:border-blue-600 hover:shadow-lg transition-all text-left space-y-4 group"
               >
                 <div className="text-4xl">⚙️</div>
-                <h3 className="text-xl font-bold text-gray-800 group-hover:text-blue-600">Custom Configuration</h3>
+                <h3 className="text-xl font-bold text-gray-800 group-hover:text-blue-600">Make your own Practice Question Paper</h3>
                 <p className="text-sm text-gray-600">Choose class, subject, and difficulty level</p>
                 <p className="text-xs text-gray-500">Select specific question types and numbers</p>
               </button>
@@ -293,7 +293,7 @@ export default function Home() {
                 className="p-8 border-2 border-purple-200 rounded-xl hover:border-purple-600 hover:shadow-lg transition-all text-left space-y-4 group"
               >
                 <div className="text-4xl">📋</div>
-                <h3 className="text-xl font-bold text-gray-800 group-hover:text-purple-600">Use Pattern</h3>
+                <h3 className="text-xl font-bold text-gray-800 group-hover:text-purple-600">Upload Your Template Exam Question Paper</h3>
                 <p className="text-sm text-gray-600">Upload a sample paper to match</p>
                 <p className="text-xs text-gray-500">Replicates format, structure, and style</p>
               </button>
@@ -377,7 +377,7 @@ export default function Home() {
                 >
                   <div className="text-5xl md:text-6xl mb-4">📄</div>
                   <p className="text-base md:text-lg text-gray-700 font-semibold mb-2">
-                    {file ? <span className="text-blue-600">{file.name}</span> : 'Drop PDF or click'}
+                    {file ? <span className="text-blue-600">{file.name}</span> : 'Drag PDF or click to Upload'}
                   </p>
                   <p className="text-xs md:text-sm text-gray-500">Max 16MB</p>
                   <input

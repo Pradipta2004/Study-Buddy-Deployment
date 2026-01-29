@@ -375,7 +375,7 @@ export default function LatexPreview({ content }: Props) {
                           : 'bg-purple-700 text-white hover:bg-purple-800'
                       }`}
                     >
-                      {visibleSolutions.has(q.number) ? '▼ Hide' : '► Show'}
+                      {visibleSolutions.has(q.number) ? '▼ Hide' : '► Solution'}
                     </button>
                   )}
                 </div>

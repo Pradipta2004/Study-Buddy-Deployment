@@ -219,15 +219,15 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
       {/* Question Types */}
       <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 space-y-3">
         <div className="flex justify-between items-center">
-          <p className="font-bold text-gray-800 text-sm">Question Types</p>
-          <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">Tot: {getTotalQuestionsByType()}</span>
+          <p className="font-bold text-gray-800 text-sm">One Mark Questions</p>
+          <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded">Total: {getTotalQuestionsByType()}</span>
         </div>
         <div className="space-y-2">
           {[
             { key: 'mcq' as const, label: 'MCQ' },
-            { key: 'trueFalse' as const, label: 'T/F' },
-            { key: 'fillInBlanks' as const, label: 'Fill' },
-            { key: 'general' as const, label: 'Gen' }
+            { key: 'trueFalse' as const, label: 'True/False' },
+            { key: 'fillInBlanks' as const, label: 'Fill in the Blanks' },
+            { key: 'general' as const, label: 'Short Answer Type' }
           ].map(item => (
             <div key={item.key} className="flex items-center justify-between bg-white p-2 rounded border border-blue-100">
               <span className="font-medium text-gray-700 text-xs">{item.label}</span>
@@ -257,7 +257,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
       <div className="bg-green-50 p-3 rounded-lg border border-green-200 space-y-3">
         <div className="flex justify-between items-center">
           <p className="font-bold text-gray-800 text-sm">By Marks</p>
-          <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">Tot: {getTotalQuestionsByMarks()}</span>
+          <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">Total: {getTotalQuestionsByMarks()}</span>
         </div>
         <div className="grid grid-cols-3 gap-2">
           {[

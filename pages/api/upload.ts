@@ -53,7 +53,7 @@ async function generateQuestionsWithGemini(
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const subject = metadata.subject || 'mathematics';
   const questionTypes = metadata.questionTypes || ['problem-solving', 'conceptual', 'application'];
