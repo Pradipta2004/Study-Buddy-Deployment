@@ -430,20 +430,19 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
         </div>
       </div>
 
-      {/* Marks Configuration */}
+      {/* Short Answer Questions (2-4 marks) */}
       <div className="bg-green-50 p-3 rounded-lg border border-green-200 space-y-3">
         <div className="flex justify-between items-center">
-          <p className="font-bold text-gray-800 text-sm">By Marks</p>
-          <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">Total: {getTotalQuestionsByMarks()}</span>
+          <p className="font-bold text-gray-800 text-sm">📝 Short Answer Questions</p>
+          <span className="text-xs bg-green-600 text-white px-2 py-1 rounded">
+            Total: {(config.questionsByMarks?.['2'] || 0) + (config.questionsByMarks?.['3'] || 0) + (config.questionsByMarks?.['4'] || 0)}
+          </span>
         </div>
         <div className="grid grid-cols-3 gap-2">
           {[
             { key: '2' as const, label: '2' },
             { key: '3' as const, label: '3' },
-            { key: '4' as const, label: '4' },
-            { key: '5' as const, label: '5' },
-            { key: '6' as const, label: '6' },
-            { key: '10' as const, label: '10' }
+            { key: '4' as const, label: '4' }
           ].map(item => (
             <div key={item.key}>
               <div className="flex items-center justify-between bg-white p-2 rounded border border-green-100">
@@ -466,6 +465,54 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
                   <button
                     onClick={() => handleQuestionMarkCountChange(item.key, 1)}
                     className="w-5 h-5 bg-green-600 hover:bg-green-700 rounded text-xs font-bold text-white"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              {errorMessages[`marks_${item.key}`] && (
+                <p className="text-xs text-red-600 mt-0.5 px-2">⚠️ {errorMessages[`marks_${item.key}`]}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Long / Descriptive Answer (5, 6, 10 marks) */}
+      <div className="bg-purple-50 p-3 rounded-lg border border-purple-200 space-y-3">
+        <div className="flex justify-between items-center">
+          <p className="font-bold text-gray-800 text-sm">📄 Long / Descriptive Answer</p>
+          <span className="text-xs bg-purple-600 text-white px-2 py-1 rounded">
+            Total: {(config.questionsByMarks?.['5'] || 0) + (config.questionsByMarks?.['6'] || 0) + (config.questionsByMarks?.['10'] || 0)}
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { key: '5' as const, label: '5' },
+            { key: '6' as const, label: '6' },
+            { key: '10' as const, label: '10' }
+          ].map(item => (
+            <div key={item.key}>
+              <div className="flex items-center justify-between bg-white p-2 rounded border border-purple-100">
+                <span className="font-medium text-gray-700 text-xs">{item.label}m</span>
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => handleQuestionMarkCountChange(item.key, -1)}
+                    className="w-5 h-5 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    max={MAX_QUESTIONS_BY_MARKS}
+                    value={config.questionsByMarks?.[item.key] || 0}
+                    onChange={(e) => handleQuestionMarkInputChange(item.key, e.target.value)}
+                    className="w-8 text-center text-xs font-bold text-gray-800 border border-gray-300 rounded px-0.5 py-0.5"
+                  />
+                  <button
+                    onClick={() => handleQuestionMarkCountChange(item.key, 1)}
+                    className="w-5 h-5 bg-purple-600 hover:bg-purple-700 rounded text-xs font-bold text-white"
                   >
                     +
                   </button>
