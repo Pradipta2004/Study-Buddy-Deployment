@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import QuestionCustomizer from '@/components/QuestionCustomizer';
 import LatexPreview from '@/components/LatexPreview';
 
@@ -80,6 +80,161 @@ export default function Home() {
   const patternFileInputRef = useRef<HTMLInputElement>(null);
   const quoteIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const modalPreviewRef = useRef<HTMLDivElement>(null);
+
+  // Convert LaTeX content to HTML-friendly format
+  const formatContent = (latex: string) => {
+    // Remove documentclass and preamble for preview
+    let formatted = latex
+      .replace(/\\documentclass(?:\[[^\]]*\])?\{[^}]*\}/g, '')
+      .replace(/\\usepackage(?:\[[^\]]*\])?\{[^}]*\}/g, '')
+      .replace(/\\geometry\{[^}]*\}/g, '')
+      .replace(/\\pagestyle\{[^}]*\}/g, '')
+      .replace(/\\setlength\{[^}]*\}\{[^}]*\}/g, '')
+      .replace(/\\addtolength\{[^}]*\}\{[^}]*\}/g, '')
+      .replace(/\\fancyhf\{\}/g, '')
+      .replace(/\\fancyhead\[[^\]]*\]\{[^}]*\}/g, '')
+      .replace(/\\fancyfoot\[[^\]]*\]\{[^}]*\}/g, '')
+      .replace(/\\begin\{document\}/g, '')
+      .replace(/\\end\{document\}/g, '')
+      .replace(/\\maketitle/g, '')
+      .replace(/\\title\{([^}]*)\}/g, '')
+      .replace(/\\author\{([^}]*)\}/g, '')
+      .replace(/\\date\{([^}]*)\}/g, '')
+      .replace(/\\noindent/g, '')
+      .replace(/\\centering/g, '')
+      .replace(/\\phantom\{[^}]*\}/g, '')
+      .replace(/\\dimexpr[^}]*\\fboxsep[^}]*\\fboxrule/g, '100%')
+      .replace(/\\vspace\{[^}]*\}/g, '<div class="my-4"></div>')
+      // Handle fill-in-the-blank pattern BEFORE processing standalone hspace and underline
+      .replace(/\\underline\{\\hspace\{([^}]+)\}\}/g, (match, size) => {
+        const numMatch = size.match(/([\d.]+)/);
+        const num = numMatch ? parseFloat(numMatch[1]) : 2;
+        const pixels = Math.max(num * 37.8, 80);
+        return `<span class="inline-block border-b-2 border-gray-800" style="width: ${pixels}px; min-width: 80px; height: 1.5em; vertical-align: bottom;"></span>`;
+      })
+      .replace(/\\hspace\{[^}]*\}/g, '<span class="inline-block w-4"></span>')
+      .replace(/\\newpage/g, '<div class="border-t-2 border-gray-300 my-8"></div>');
+
+    // Convert center environment
+    formatted = formatted
+      .replace(/\\begin\{center\}([\s\S]*?)\\end\{center\}/g, '<div class="text-center">$1</div>');
+
+    // Convert fbox and parbox
+    formatted = formatted
+      .replace(/\\fbox\{\\parbox\{[^}]*\}\{([\s\S]*?)\}\}/g, (match, content) => {
+        const processed = content
+          .replace(/\\begin\{itemize\}\[leftmargin=\*,?\s*itemsep=[^\]]*\]/g, '<ul class="list-disc ml-5 space-y-0.5 my-2">')
+          .replace(/\\begin\{itemize\}\[itemsep=[^\]]*\]/g, '<ul class="list-disc ml-5 space-y-0.5 my-2">')
+          .replace(/\\begin\{itemize\}/g, '<ul class="list-disc ml-5 space-y-1 my-2">');
+        return `<div class="border-2 border-black p-4 my-6 bg-white">${processed}</div>`;
+      })
+      .replace(/\\fbox\{([\s\S]*?)\}/g, '<div class="border-2 border-gray-800 p-4 rounded-md inline-block">$1</div>');
+
+    // Convert rules and lines
+    formatted = formatted
+      .replace(/\\rule\{[^}]*\}\{[^}]*\}/g, '<hr class="border-t-2 border-gray-400 my-2" />');
+
+    // Convert sections
+    formatted = formatted
+      .replace(/\\section\*\{([^}]*)\}/g, '<h2 class="text-2xl font-bold mt-8 mb-4 text-purple-700">$1</h2>')
+      .replace(/\\subsection\*\{([^}]*)\}/g, '<h3 class="text-xl font-semibold mt-6 mb-3 text-indigo-600">$1</h3>')
+      .replace(/\\section\{([^}]*)\}/g, '<h2 class="text-2xl font-bold mt-8 mb-4 text-purple-700">$1</h2>')
+      .replace(/\\subsection\{([^}]*)\}/g, '<h3 class="text-xl font-semibold mt-6 mb-3 text-indigo-600">$1</h3>');
+
+    // Convert font sizes
+    formatted = formatted
+      .replace(/\{\\Large\s+(.*?)\}/g, '<span class="text-2xl">$1</span>')
+      .replace(/\{\\large\s+(.*?)\}/g, '<span class="text-xl">$1</span>')
+      .replace(/\{\\small\s+(.*?)\}/g, '<span class="text-sm">$1</span>')
+      .replace(/\{\\tiny\s+(.*?)\}/g, '<span class="text-xs">$1</span>');
+
+    // Convert lists
+    formatted = formatted
+      .replace(/\\begin\{itemize\}(?:\[[^\]]*\])?/g, '<ul class="list-disc ml-6 my-3 space-y-1">')
+      .replace(/\\end\{itemize\}/g, '</ul>')
+      .replace(/\\begin\{enumerate\}(?:\[[^\]]*\])?/g, '<ol class="list-decimal ml-6 my-3 space-y-1">')
+      .replace(/\\end\{enumerate\}/g, '</ol>')
+      .replace(/\\item(?:\s*\[[^\]]*\])?/g, '<li class="ml-0 pl-1">');
+
+    // Convert text formatting
+    formatted = formatted
+      .replace(/\\textbf\{([^}]*)\}/g, '<strong>$1</strong>')
+      .replace(/\\textit\{([^}]*)\}/g, '<em>$1</em>')
+      .replace(/\\emph\{([^}]*)\}/g, '<em>$1</em>')
+      .replace(/\\underline\{([^}]*)\}/g, '<u>$1</u>');
+
+    // Convert line breaks
+    formatted = formatted
+      .replace(/\\\\\[?[^\]]*\]?/g, '<br/>')
+      .replace(/\\newline/g, '<br/>');
+
+    // Handle special characters
+    formatted = formatted
+      .replace(/\\&/g, '&')
+      .replace(/\\%/g, '%')
+      .replace(/\\#/g, '#')
+      .replace(/\\_(?![^$]*\$)/g, '_');
+    
+    // Handle additional LaTeX commands
+    formatted = formatted
+      .replace(/\\bigskip/g, '<div class="my-6"></div>')
+      .replace(/\\medskip/g, '<div class="my-4"></div>')
+      .replace(/\\smallskip/g, '<div class="my-2"></div>')
+      .replace(/\\quad/g, '<span class="inline-block w-8"></span>')
+      .replace(/\\qquad/g, '<span class="inline-block w-16"></span>')
+      .replace(/\\par\s*/g, '</p><p class="my-4">');
+
+    // Add paragraph breaks for double newlines
+    formatted = formatted
+      .split('\n\n')
+      .map(para => para.trim())
+      .filter(para => para.length > 0 && !para.match(/^<[^>]+>$/))
+      .map(para => {
+        if (para.match(/^<(div|h[1-6]|ul|ol|hr)/)) {
+          return para;
+        }
+        return `<p class="my-4">${para}</p>`;
+      })
+      .join('\n');
+
+    return formatted;
+  };
+
+  // KaTeX rendering for the modal
+  useEffect(() => {
+    if (showCompleteSolutions && allQuestions.length > 0 && modalPreviewRef.current) {
+      const renderMath = () => {
+        try {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js';
+          script.onload = () => {
+            const script2 = document.createElement('script');
+            script2.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js';
+            script2.onload = () => {
+              if (modalPreviewRef.current && (window as any).renderMathInElement) {
+                (window as any).renderMathInElement(modalPreviewRef.current, {
+                  delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false },
+                    { left: '\\[', right: '\\]', display: true },
+                    { left: '\\(', right: '\\)', display: false }
+                  ],
+                  throwOnError: false
+                });
+              }
+            };
+            document.head.appendChild(script2);
+          };
+          document.head.appendChild(script);
+        } catch (error) {
+          console.error('KaTeX rendering error:', error);
+        }
+      };
+
+      setTimeout(renderMath, 100);
+    }
+  }, [showCompleteSolutions, allQuestions]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -585,7 +740,7 @@ export default function Home() {
                     ✕
                   </button>
 
-                  <div className="p-6 md:p-8 space-y-6">
+                  <div ref={modalPreviewRef} className="p-6 md:p-8 space-y-6">
                     <div className="text-center mb-6 mt-6">
                       <h2 className="text-2xl md:text-3xl font-bold text-purple-700">📚 Complete Solutions</h2>
                       <p className="text-gray-600 mt-2">{allQuestions.length} Questions with Solutions</p>
@@ -606,14 +761,20 @@ export default function Home() {
 
                           {/* Question Content */}
                           <div className="p-4 bg-white border-b border-gray-200">
-                            <p className="text-gray-800 text-sm leading-relaxed">{q.question}</p>
+                            <div
+                              className="prose prose-sm max-w-none text-gray-800 text-sm leading-relaxed [&>p]:my-2 [&>ul]:my-2 [&>ol]:my-2 [&_li]:my-0.5"
+                              dangerouslySetInnerHTML={{ __html: formatContent(q.question) }}
+                            />
                           </div>
 
                           {/* Solution */}
                           {q.solution && (
                             <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 border-t-2 border-green-300">
                               <p className="font-bold text-green-700 mb-2">✓ Solution:</p>
-                              <p className="text-gray-800 text-sm leading-relaxed">{q.solution}</p>
+                              <div
+                                className="prose prose-sm max-w-none text-gray-800 text-sm leading-relaxed [&>p]:my-2 [&>ul]:my-2 [&>ol]:my-2 [&_li]:my-0.5"
+                                dangerouslySetInnerHTML={{ __html: formatContent(q.solution) }}
+                              />
                             </div>
                           )}
                         </div>
