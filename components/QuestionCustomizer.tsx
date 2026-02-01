@@ -38,8 +38,8 @@ const SUBJECTS = [
   { value: 'hindi', label: '🇮🇳 Hindi', levels: ['secondary', 'higher-secondary'] },
   { value: 'social-science', label: '🌍 Social Science', levels: ['secondary'] },
   { value: 'computer-science', label: '💻 Computer Science', levels: ['secondary', 'higher-secondary', 'college'] },
-  { value: 'sanskrit', label: '🕉️ Sanskrit', levels: ['secondary', 'higher-secondary'] },
-  { value: 'environmental-science', label: '🌱 Environmental Science', levels: ['secondary', 'college'] },
+  { value: 'sanskrit', label: '�️ Sanskrit', levels: ['secondary', 'higher-secondary'] },
+  { value: 'environmental-science', label: '� Environmental Science', levels: ['secondary', 'college'] },
   { value: 'physics', label: '⚛️ Physics', levels: ['higher-secondary', 'college'] },
   { value: 'chemistry', label: '🧪 Chemistry', levels: ['higher-secondary', 'college'] },
   { value: 'biology', label: '🧬 Biology', levels: ['higher-secondary', 'college'] },
@@ -438,7 +438,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
             Total: {(config.questionsByMarks?.['2'] || 0) + (config.questionsByMarks?.['3'] || 0) + (config.questionsByMarks?.['4'] || 0)}
           </span>
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="space-y-2">
           {[
             { key: '2' as const, label: '2' },
             { key: '3' as const, label: '3' },
@@ -446,11 +446,11 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
           ].map(item => (
             <div key={item.key}>
               <div className="flex items-center justify-between bg-white p-2 rounded border border-green-100">
-                <span className="font-medium text-gray-700 text-xs">{item.label}m</span>
-                <div className="flex items-center gap-0.5">
+                <span className="font-medium text-gray-700 text-xs flex-1">{item.label}m</span>
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleQuestionMarkCountChange(item.key, -1)}
-                    className="w-5 h-5 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+                    className="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
                   >
                     −
                   </button>
@@ -460,18 +460,18 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
                     max={MAX_QUESTIONS_BY_MARKS}
                     value={config.questionsByMarks?.[item.key] || 0}
                     onChange={(e) => handleQuestionMarkInputChange(item.key, e.target.value)}
-                    className="w-8 text-center text-xs font-bold text-gray-800 border border-gray-300 rounded px-0.5 py-0.5"
+                    className="w-10 text-center text-xs font-bold text-gray-800 border border-gray-300 rounded px-1 py-0.5"
                   />
                   <button
                     onClick={() => handleQuestionMarkCountChange(item.key, 1)}
-                    className="w-5 h-5 bg-green-600 hover:bg-green-700 rounded text-xs font-bold text-white"
+                    className="w-6 h-6 bg-green-600 hover:bg-green-700 rounded text-xs font-bold text-white"
                   >
                     +
                   </button>
                 </div>
               </div>
               {errorMessages[`marks_${item.key}`] && (
-                <p className="text-xs text-red-600 mt-0.5 px-2">⚠️ {errorMessages[`marks_${item.key}`]}</p>
+                <p className="text-xs text-red-600 mt-1 px-2">⚠️ {errorMessages[`marks_${item.key}`]}</p>
               )}
             </div>
           ))}
@@ -486,7 +486,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
             Total: {(config.questionsByMarks?.['5'] || 0) + (config.questionsByMarks?.['6'] || 0) + (config.questionsByMarks?.['10'] || 0)}
           </span>
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="space-y-2">
           {[
             { key: '5' as const, label: '5' },
             { key: '6' as const, label: '6' },
@@ -494,11 +494,11 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
           ].map(item => (
             <div key={item.key}>
               <div className="flex items-center justify-between bg-white p-2 rounded border border-purple-100">
-                <span className="font-medium text-gray-700 text-xs">{item.label}m</span>
-                <div className="flex items-center gap-0.5">
+                <span className="font-medium text-gray-700 text-xs flex-1">{item.label}m</span>
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleQuestionMarkCountChange(item.key, -1)}
-                    className="w-5 h-5 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
+                    className="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded text-xs font-bold"
                   >
                     −
                   </button>
@@ -508,18 +508,18 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
                     max={MAX_QUESTIONS_BY_MARKS}
                     value={config.questionsByMarks?.[item.key] || 0}
                     onChange={(e) => handleQuestionMarkInputChange(item.key, e.target.value)}
-                    className="w-8 text-center text-xs font-bold text-gray-800 border border-gray-300 rounded px-0.5 py-0.5"
+                    className="w-10 text-center text-xs font-bold text-gray-800 border border-gray-300 rounded px-1 py-0.5"
                   />
                   <button
                     onClick={() => handleQuestionMarkCountChange(item.key, 1)}
-                    className="w-5 h-5 bg-purple-600 hover:bg-purple-700 rounded text-xs font-bold text-white"
+                    className="w-6 h-6 bg-purple-600 hover:bg-purple-700 rounded text-xs font-bold text-white"
                   >
                     +
                   </button>
                 </div>
               </div>
               {errorMessages[`marks_${item.key}`] && (
-                <p className="text-xs text-red-600 mt-0.5 px-2">⚠️ {errorMessages[`marks_${item.key}`]}</p>
+                <p className="text-xs text-red-600 mt-1 px-2">⚠️ {errorMessages[`marks_${item.key}`]}</p>
               )}
             </div>
           ))}

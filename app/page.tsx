@@ -673,12 +673,12 @@ export default function Home() {
                 )}
 
                 <div className="card p-6 md:p-8 space-y-6 mt-6">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <h2 className="text-2xl md:text-3xl font-bold text-gray-800">✅ Generated</h2>
                     {!isFromPattern && allQuestions.length > 0 && (
                       <button
                         onClick={() => setShowCompleteSolutions(true)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-xs sm:text-sm w-full sm:w-auto whitespace-nowrap"
                       >
                         📋 See Complete Solution
                       </button>
