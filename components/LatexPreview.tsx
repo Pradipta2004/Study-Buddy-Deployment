@@ -124,15 +124,26 @@ export default function LatexPreview({ content, onQuestionsLoaded }: Props) {
           }
           
           // Try to split by solution
-          const solutionMatch = fullContent.match(pattern.solutionPattern);
-          
           let questionText, solutionText;
-          if (solutionMatch) {
-            questionText = solutionMatch[1].trim();
-            solutionText = solutionMatch[2]?.trim() || '';
+          
+          // Priority 1: Check for explicit solution markers
+          const markerMatch = fullContent.match(/([\s\S]*?)% START SOLUTION([\s\S]*?)% END SOLUTION/);
+          
+          if (markerMatch) {
+            questionText = markerMatch[1].trim();
+            solutionText = markerMatch[2].trim();
+            console.log(`Found solution with explicit markers for Q${questionNumber}`);
           } else {
-            questionText = fullContent.trim();
-            solutionText = '';
+            // Priority 2: Use pattern-specific solution regex
+            const solutionMatch = fullContent.match(pattern.solutionPattern);
+            
+            if (solutionMatch) {
+              questionText = solutionMatch[1].trim();
+              solutionText = solutionMatch[2]?.trim() || '';
+            } else {
+              questionText = fullContent.trim();
+              solutionText = '';
+            }
           }
           
           // More lenient length check

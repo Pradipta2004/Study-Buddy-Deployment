@@ -144,6 +144,9 @@ export default async function handler(
     
     if (!includeSolutions) {
       // Remove all solution sections comprehensively
+      // Pattern 0: Explicit markers (High Priority)
+      processedLatex = processedLatex.replace(/% START SOLUTION[\s\S]*?% END SOLUTION/gi, '');
+
       // Pattern 1: \subsection*{Solution} ... until next question or end
       processedLatex = processedLatex.replace(/\\subsection\*\{Solution\}[\s\S]*?(?=\\noindent\\textbf\{Q\.|\\subsection\*\{Q|\\subsection\*\{Question|\\end\{document\})/gi, '');
       

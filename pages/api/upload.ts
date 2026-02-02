@@ -10,7 +10,7 @@ export const config = {
     responseLimit: '10mb',
     externalResolver: true,
   },
-  maxDuration: 300, // 5 minutes for Gemini processing
+  maxDuration: 600, // 10 minutes for Gemini processing
 };
 
 interface PDFMetadata {
@@ -35,11 +35,81 @@ interface PDFMetadata {
 }
 
 async function extractTextFromPDF(filePath: string): Promise<string> {
-  const { PDFParse } = await import('pdf-parse');
-  const dataBuffer = fs.readFileSync(filePath);
-  const parser = new PDFParse({ data: dataBuffer });
-  const result = await parser.getText();
-  return result.text;
+  try {
+    // 1. Validate file existence and size
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File not found at: ${filePath}`);
+    }
+    const stats = fs.statSync(filePath);
+    if (stats.size === 0) {
+      throw new Error('File is empty (0 bytes).');
+    }
+
+    // 2. Load pdf-parse (v2)
+    let PDFParse;
+    try {
+      // Handle both CommonJS and ES Module environments
+      const pdfModule = require('pdf-parse');
+      PDFParse = pdfModule.PDFParse || pdfModule.default?.PDFParse || pdfModule.default;
+      
+      if (typeof PDFParse !== 'function') {
+         // Fallback: maybe the module itself is the class (rare for v2 but checking)
+         if (typeof pdfModule === 'function') PDFParse = pdfModule; 
+      }
+    } catch (e) {
+      console.error('Failed to require pdf-parse:', e);
+      throw new Error('Server error: PDF parser library not available.');
+    }
+
+    if (!PDFParse) {
+        throw new Error('Server error: Could not load PDFParse class.');
+    }
+
+    // 3. Read file
+    let dataBuffer;
+    try {
+      dataBuffer = fs.readFileSync(filePath);
+    } catch (e: any) {
+      throw new Error(`Failed to read file from disk: ${e.message}`);
+    }
+    
+    // 4. Parse with timeout
+    // Using v2 API: new PDFParse({ data: buffer })
+    const parserProcess = async () => {
+        const parser = new PDFParse({ data: dataBuffer });
+        const result = await parser.getText();
+        return result.text;
+    };
+
+    const timeoutPromise = new Promise<string>((_, reject) => {
+      setTimeout(() => reject(new Error('PDF parsing timed out')), 60000);
+    });
+
+    const text = await Promise.race([parserProcess(), timeoutPromise]);
+    
+    // 5. Validate result
+    if (typeof text !== 'string') {
+        return "";
+    }
+    
+    return text;
+  } catch (error: any) {
+    console.error(`Error extracting text from PDF (${filePath}):`, error);
+    
+    const msg = error.message || String(error);
+    
+    if (msg.includes('timed out')) {
+      throw new Error('PDF parsing timed out (60s). The file is too complex or large.');
+    }
+    if (msg.includes('PasswordException') || msg.includes('password')) {
+        throw new Error('The PDF is password protected. Please unlock it and try again.');
+    }
+    if (msg.includes('InvalidPDFException') || msg.includes('Invalid PDF')) {
+        throw new Error('The file is not a valid PDF or is corrupted.');
+    }
+    
+    throw new Error(`Failed to extract text from PDF: ${msg}`);
+  }
 }
 
 async function generateQuestionsWithGemini(
@@ -590,14 +660,14 @@ ${patternSection ? '>>> PRIORITY 1: PATTERN MATCHING <<<\n' + patternSection + '
 ${pdfText}
 ${patternSection ? '' : '\n\nPlease generate high-quality ' + subject + ' questions based on this content.' + questionBreakdown}
 
-${patternText ? '\n\n>>> GENERATION INSTRUCTIONS <<<\n\nYou MUST:\n1. Extract the EXACT LaTeX structure from the pattern above\n2. Keep ALL formatting elements: \\\\documentclass, \\\\usepackage, \\\\geometry, headers, footers, boxes, tables, rules\n3. Maintain the EXACT question numbering and section format\n4. Match the mark distribution precisely\n5. Generate NEW questions (from the content PDF) that fit this EXACT format\n6. Use the same spacing, fonts, and layout\n7. Include solutions in the SAME format as shown in pattern (if pattern has solutions)\n\nYour output should be ready-to-compile LaTeX that looks IDENTICAL to the pattern but with new questions from the content.' : 'Question Requirements:\n- Question types: ' + questionTypeDesc + '\n- Difficulty level: ' + difficulty + '\n- Each question should be clear and well-formatted\n- Provide detailed step-by-step solutions\n- Use proper LaTeX notation for all mathematical expressions' + customInstructionsSection + '\n\nFormat your response ENTIRELY in LaTeX using this EXACT structure for a proper exam paper:'}
+${patternText ? '\n\n>>> GENERATION INSTRUCTIONS <<<\n\nYou MUST:\n1. Extract the EXACT LaTeX structure from the pattern above\n2. Keep ALL formatting elements: \\\\documentclass, \\\\usepackage, \\\\geometry, headers, footers, boxes, tables, rules\n3. Maintain the EXACT question numbering and section format\n4. Match the mark distribution precisely\n5. Generate NEW questions (from the content PDF) that fit this EXACT format\n6. Use the same spacing, fonts, and layout\n7. WRAP EVERY SOLUTION in specific markers: Put "% START SOLUTION" before the solution starts and "% END SOLUTION" after it ends.\n   - If the pattern has solutions, use the EXACT visual format found in the pattern inside these markers.\n   - If the pattern DOES NOT have solutions, you MUST generate them anyway using this format inside the markers:\n     \\subsection*{Solution}\n     [Step-by-step solution content]\n\nYour output should be ready-to-compile LaTeX that looks IDENTICAL to the pattern but with new questions from the content.' : 'Question Requirements:\n- Question types: ' + questionTypeDesc + '\n- Difficulty level: ' + difficulty + '\n- Each question should be clear and well-formatted\n- Provide detailed step-by-step solutions\n- Use proper LaTeX notation for all mathematical expressions' + customInstructionsSection + '\n\nFormat your response ENTIRELY in LaTeX using this EXACT structure for a proper exam paper:'}
 
-${patternSection ? '' : '\n\\documentclass[12pt,a4paper]{article}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n\\usepackage{geometry}\n\\usepackage{enumitem}\n\\usepackage{fancyhdr}\n\\usepackage{graphicx}\n\\geometry{margin=0.75in, top=1in, bottom=1in}\n\n\\pagestyle{fancy}\n\\fancyhf{}\n\\fancyhead[L]{\\textbf{' + subject.charAt(0).toUpperCase() + subject.slice(1) + ' Examination}}\n\\fancyhead[R]{\\textbf{Page \\thepage}}\n\\fancyfoot[C]{\\small All questions carry marks as indicated}\n\n\\begin{document}\n\n% Header Section\n\\begin{center}\n{\\Large \\textbf{EXAMINATION PAPER}}\\\\[0.3cm]\n{\\large \\textbf{Subject: ' + subject.charAt(0).toUpperCase() + subject.slice(1) + '}}\\\\[0.2cm]\n{\\textbf{Difficulty Level: ' + difficulty.charAt(0).toUpperCase() + difficulty.slice(1) + '}}\\\\[0.2cm]\n\\rule{\\textwidth}{0.4pt}\n\\end{center}\n\n\\vspace{0.3cm}\n\n% Instructions Box\n\\noindent\\fbox{\\parbox{\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule}{\n\\textbf{INSTRUCTIONS TO CANDIDATES:}\\\\[0.2cm]\n\\begin{itemize}[leftmargin=*, itemsep=0pt]\n\\item Read all questions carefully before attempting.\n\\item Answer all questions in the space provided or on separate sheets.\n\\item Show all working for full credit.\n\\item Marks for each question are indicated in brackets.\n\\item Use of calculator is permitted (if applicable).\n' + (questionBreakdown ? '\\item ' + questionBreakdown.replace(/\n/g, '\n\\item ').replace('1 Mark Questions:', '\\textbf{Section A:} 1 Mark Questions').replace('Questions by Marks:', '\\textbf{Section B:} Higher Mark Questions') : '') + '\n\\end{itemize}\n}}\n\n\\vspace{0.5cm}\n\n% Questions Section\n\\section*{QUESTIONS}\n\n[Now generate each question using this EXACT format:\n\n\\subsection*{Question 1 [X marks]}\n[Question text with proper LaTeX math formatting]\n\n\\subsection*{Solution}\n[Detailed solution with step-by-step explanation]\n\n\\vspace{0.5cm}\n\nRepeat for all questions, ensuring proper numbering and mark allocation.]\n\n\\end{document}\n\nCRITICAL FORMATTING REQUIREMENTS:\n- Use \\subsection*{Question N [X marks]} for each question header\n- Use \\subsection*{Solution} for each solution\n- Use $...$ for inline math and $$...$$ or \\[...\\] for display math\n- For MCQs: Use (a), (b), (c), (d) format\n- For Fill in Blanks: Use \\underline{\\hspace{3cm}} for blanks\n- Add \\vspace{0.5cm} between questions for spacing\n- Make questions relevant to the provided content\n- STRICTLY follow the custom instructions if provided\n- Number questions consecutively starting from 1'}
+${patternSection ? '' : '\n\\documentclass[12pt,a4paper]{article}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n\\usepackage{geometry}\n\\usepackage{enumitem}\n\\usepackage{fancyhdr}\n\\usepackage{graphicx}\n\\geometry{margin=0.75in, top=1in, bottom=1in}\n\n\\pagestyle{fancy}\n\\fancyhf{}\n\\fancyhead[L]{\\textbf{' + subject.charAt(0).toUpperCase() + subject.slice(1) + ' Examination}}\n\\fancyhead[R]{\\textbf{Page \\thepage}}\n\\fancyfoot[C]{\\small All questions carry marks as indicated}\n\n\\begin{document}\n\n% Header Section\n\\begin{center}\n{\\Large \\textbf{EXAMINATION PAPER}}\\\\[0.3cm]\n{\\large \\textbf{Subject: ' + subject.charAt(0).toUpperCase() + subject.slice(1) + '}}\\\\[0.2cm]\n{\\textbf{Difficulty Level: ' + difficulty.charAt(0).toUpperCase() + difficulty.slice(1) + '}}\\\\[0.2cm]\n\\rule{\\textwidth}{0.4pt}\n\\end{center}\n\n\\vspace{0.3cm}\n\n% Instructions Box\n\\noindent\\fbox{\\parbox{\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule}{\n\\textbf{INSTRUCTIONS TO CANDIDATES:}\\\\[0.2cm]\n\\begin{itemize}[leftmargin=*, itemsep=0pt]\n\\item Read all questions carefully before attempting.\n\\item Answer all questions in the space provided or on separate sheets.\n\\item Show all working for full credit.\n\\item Marks for each question are indicated in brackets.\n\\item Use of calculator is permitted (if applicable).\n' + (questionBreakdown ? '\\item ' + questionBreakdown.replace(/\n/g, '\n\\item ').replace('1 Mark Questions:', '\\textbf{Section A:} 1 Mark Questions').replace('Questions by Marks:', '\\textbf{Section B:} Higher Mark Questions') : '') + '\n\\end{itemize}\n}}\n\n\\vspace{0.5cm}\n\n% Questions Section\n\\section*{QUESTIONS}\n\n[Now generate each question using this EXACT format:\n\n\\subsection*{Question 1 [X marks]}\n[Question text with proper LaTeX math formatting]\n\n% START SOLUTION\n\\subsection*{Solution}\n[Detailed solution with step-by-step explanation]\n% END SOLUTION\n\n\\vspace{0.5cm}\n\nRepeat for all questions, ensuring proper numbering and mark allocation.]\n\n\\end{document}\n\nCRITICAL FORMATTING REQUIREMENTS:\n- Use \\subsection*{Question N [X marks]} for each question header\n- Use \\subsection*{Solution} for each solution\n- Wrap EVERY solution with % START SOLUTION and % END SOLUTION comments\n- Use $...$ for inline math and $$...$$ or \\[...\\] for display math\n- For MCQs: Use (a), (b), (c), (d) format\n- For Fill in Blanks: Use \\underline{\\hspace{3cm}} for blanks\n- Add \\vspace{0.5cm} between questions for spacing\n- Make questions relevant to the provided content\n- STRICTLY follow the custom instructions if provided\n- Number questions consecutively starting from 1'}
 `;
 
   console.log('Sending request to Gemini API...');
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Gemini API request timed out after 4 minutes')), 240000);
+    setTimeout(() => reject(new Error('Gemini API request timed out after 9 minutes')), 540000);
   });
 
   const result = await Promise.race([
@@ -634,13 +704,20 @@ export default async function handler(
     const form = formidable({
       uploadDir,
       keepExtensions: true,
-      maxFileSize: 16 * 1024 * 1024, // 16MB
+      maxFileSize: 64 * 1024 * 1024, // 64MB
+      maxTotalFileSize: 128 * 1024 * 1024, // 128MB (Total for all files)
+      allowEmptyFiles: true,
+      minFileSize: 0,
     });
 
     form.parse(req, async (err, fields, files) => {
       if (err) {
         console.error('Form parse error:', err);
-        return res.status(500).json({ error: 'Failed to parse form data' });
+        // Handle specific formidable errors
+        if (err.message && (err.message.includes('maxFileSize') || err.message.includes('maxTotalFileSize'))) {
+          return res.status(400).json({ error: 'File size exceeds the limit (64MB per file, 128MB total)' });
+        }
+        return res.status(500).json({ error: 'Failed to upload files: ' + (err.message || 'Unknown error') });
       }
 
       const file = Array.isArray(files.file) ? files.file[0] : files.file;
@@ -684,7 +761,9 @@ export default async function handler(
         }
 
         // Extract text from PDF
+        console.log('Extracting text from PDF...');
         const pdfText = await extractTextFromPDF(filePath);
+        console.log('PDF text extraction complete. Length:', pdfText.length);
 
         if (!pdfText.trim()) {
           // Clean up uploaded files
@@ -701,17 +780,49 @@ export default async function handler(
         let patternText: string | undefined;
         if (patternFilePath) {
           try {
+            console.log('Extracting pattern text...');
             patternText = await extractTextFromPDF(patternFilePath);
-          } catch (error) {
+            console.log('Pattern text extraction complete. Raw length:', patternText.length);
+            
+            if (!patternText || patternText.trim().length === 0) {
+               throw new Error('Pattern PDF contains no selectable text. If this is a scanned document/image, please convert it to a searchable PDF (OCR) first.');
+            }
+
+            // Clean pattern text to remove OCR artifacts and comment lines
+            if (patternText) {
+              patternText = patternText
+                .split('\n')
+                .filter(line => {
+                  const trimmed = line.trim();
+                  // Remove lines that are just comments or metadata
+                  if (trimmed.startsWith('%')) return false;
+                  if (trimmed.match(/^(For|Adjusted|No rule|Rule at|Small space|Clear all|To fit|Apply|Various|Custom list)/i)) return false;
+                  // Keep meaningful content
+                  return trimmed.length > 0;
+                })
+                .join('\n')
+                .trim();
+              
+              console.log('Pattern text cleaned. Length:', patternText.length);
+            }
+          } catch (error: any) {
             console.error('Error extracting pattern text:', error);
-            // Continue without pattern if extraction fails
+            // Re-throw valid errors so the user knows why their pattern failed
+            throw new Error(`Failed to process Pattern PDF: ${error.message}`);
           }
         }
 
         // Generate questions using Gemini
         let latexContent = '';
         try {
-          latexContent = await generateQuestionsWithGemini(pdfText, metadata, patternText);
+          // Truncate text if excessively long to prevent timeouts
+          const MAX_TEXT_LENGTH = 150000; // Approx 30-40k tokens
+          const truncatedPdfText = pdfText.length > MAX_TEXT_LENGTH 
+            ? pdfText.substring(0, MAX_TEXT_LENGTH) + '\n...[Text Truncated]...' 
+            : pdfText;
+            
+          console.log(`Sending to Gemini: ${truncatedPdfText.length} chars of content, ${patternText ? patternText.length : 0} chars of pattern`);
+          latexContent = await generateQuestionsWithGemini(truncatedPdfText, metadata, patternText);
         } catch (geminiError: any) {
           console.error('Gemini API error:', geminiError);
           throw new Error(`AI generation failed: ${geminiError.message || 'Unknown error'}`);

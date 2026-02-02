@@ -84,8 +84,21 @@ export default function Home() {
 
   // Convert LaTeX content to HTML-friendly format
   const formatContent = (latex: string) => {
-    // Remove documentclass and preamble for preview
+    // Remove LaTeX comments and metadata lines
     let formatted = latex
+      .split('\n')
+      .filter(line => {
+        const trimmed = line.trim();
+        // Remove lines that start with % (comments)
+        if (trimmed.startsWith('%')) return false;
+        // Remove lines that look like OCR artifacts or metadata
+        if (trimmed.match(/^%\s*(For|Adjusted|No rule|Rule|Small space|Clear all|To fit|Apply|Various)/i)) return false;
+        return true;
+      })
+      .join('\n');
+    
+    // Remove documentclass and preamble for preview
+    formatted = formatted
       .replace(/\\documentclass(?:\[[^\]]*\])?\{[^}]*\}/g, '')
       .replace(/\\usepackage(?:\[[^\]]*\])?\{[^}]*\}/g, '')
       .replace(/\\geometry\{[^}]*\}/g, '')
@@ -341,6 +354,7 @@ export default function Home() {
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
+        // No explicit timeout signal, rely on browser/server timeout
       });
 
       if (!response.ok) {
@@ -350,7 +364,12 @@ export default function Home() {
           const errorData = JSON.parse(text);
           errorMessage = errorData.error || errorMessage;
         } catch {
-          errorMessage = text || errorMessage;
+          // If the response is HTML (like 504 Gateway Timeout), use a generic message with the status
+          if (text.trim().startsWith('<')) {
+            errorMessage = `Server Error (${response.status}): The request timed out or failed.`;
+          } else {
+            errorMessage = text || errorMessage;
+          }
         }
         throw new Error(errorMessage);
       }
@@ -603,7 +622,7 @@ export default function Home() {
                   <p className="text-base md:text-lg text-gray-700 font-semibold mb-2">
                     {file ? <span className="text-blue-600">{file.name}</span> : 'Drag PDF or click to Upload'}
                   </p>
-                  <p className="text-xs md:text-sm text-red-600 font-semibold">Max 16MB</p>
+                  <p className="text-xs md:text-sm text-red-600 font-semibold">Max 64MB</p>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -675,7 +694,7 @@ export default function Home() {
                 <div className="card p-6 md:p-8 space-y-6 mt-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <h2 className="text-2xl md:text-3xl font-bold text-gray-800">✅ Generated</h2>
-                    {!isFromPattern && allQuestions.length > 0 && (
+                    {allQuestions.length > 0 && (
                       <button
                         onClick={() => setShowCompleteSolutions(true)}
                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-xs sm:text-sm w-full sm:w-auto whitespace-nowrap"
@@ -685,7 +704,10 @@ export default function Home() {
                     )}
                   </div>
 
-                  {!isFromPattern && <LatexPreview content={latexContent} onQuestionsLoaded={setAllQuestions} />}
+                  <div className={isFromPattern ? 'hidden' : ''}>
+                    <LatexPreview content={latexContent} onQuestionsLoaded={setAllQuestions} />
+                  </div>
+                  
                   {isFromPattern && (
                     <div className="text-center space-y-3 py-8">
                       <div className="text-5xl">✓</div>
