@@ -69,9 +69,15 @@ function sanitizeLatex(latex: string): string {
   // Fix bare special characters outside math mode
   sanitized = sanitized.replace(/(?<!\\)_(?![_\s])/g, '\\_');
   sanitized = sanitized.replace(/(?<!\\)&/g, '\\&');
-  sanitized = sanitized.replace(/(?<!\\)%/g, '\\%');
   sanitized = sanitized.replace(/(?<!\\)#/g, '\\#');
   sanitized = sanitized.replace(/(?<!\\)\^/g, '\\^{}');
+
+  // IMPORTANT: Do NOT globally escape '%' here.
+  // In LaTeX, '%' begins a comment and is frequently used in templates/patterned papers.
+  // Escaping it would turn comments into visible text (e.g. "\\% For ..."), which is exactly
+  // the artifact the user is seeing.
+  // Instead, only escape numeric percents that are clearly meant to be rendered, like "50%".
+  sanitized = sanitized.replace(/(\d)\s*%(\s|$)/g, '$1\\\\%$2');
   
   // Fix sequences of underscores (like _____ for fill-in-the-blanks)
   // Replace 2 or more consecutive escaped underscores with proper LaTeX blank

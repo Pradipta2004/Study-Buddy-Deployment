@@ -34,6 +34,30 @@ interface PDFMetadata {
   };
 }
 
+function truncateForPrompt(
+  text: string,
+  maxChars: number,
+  label: string
+): { text: string; truncated: boolean; originalLength: number } {
+  const originalLength = text.length;
+  if (originalLength <= maxChars) {
+    return { text, truncated: false, originalLength };
+  }
+
+  // Keep both the beginning and end so headings/structure and footer cues survive.
+  const headLen = Math.floor(maxChars * 0.65);
+  const tailLen = maxChars - headLen;
+  const head = text.slice(0, headLen);
+  const tail = text.slice(-tailLen);
+
+  return {
+    text:
+      `${head}\n\n...[${label} TRUNCATED: kept first ${headLen} + last ${tailLen} chars out of ${originalLength}]...\n\n${tail}`,
+    truncated: true,
+    originalLength,
+  };
+}
+
 async function extractTextFromPDF(filePath: string): Promise<string> {
   try {
     // 1. Validate file existence and size
@@ -73,7 +97,7 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
       throw new Error(`Failed to read file from disk: ${e.message}`);
     }
     
-    // 4. Parse with timeout
+    // 4. Parse with timeout (adaptive for large PDFs)
     // Using v2 API: new PDFParse({ data: buffer })
     const parserProcess = async () => {
         const parser = new PDFParse({ data: dataBuffer });
@@ -81,8 +105,12 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
         return result.text;
     };
 
+    // Base 60s, add 15s per 5MB up to 180s.
+    const extra = Math.floor(stats.size / (5 * 1024 * 1024)) * 15000;
+    const timeoutMs = Math.min(180000, Math.max(60000, 60000 + extra));
+
     const timeoutPromise = new Promise<string>((_, reject) => {
-      setTimeout(() => reject(new Error('PDF parsing timed out')), 60000);
+      setTimeout(() => reject(new Error(`PDF parsing timed out after ${timeoutMs}ms`)), timeoutMs);
     });
 
     const text = await Promise.race([parserProcess(), timeoutPromise]);
@@ -99,7 +127,7 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
     const msg = error.message || String(error);
     
     if (msg.includes('timed out')) {
-      throw new Error('PDF parsing timed out (60s). The file is too complex or large.');
+      throw new Error('PDF parsing timed out. The file is too complex or very large.');
     }
     if (msg.includes('PasswordException') || msg.includes('password')) {
         throw new Error('The PDF is password protected. Please unlock it and try again.');
@@ -815,14 +843,27 @@ export default async function handler(
         // Generate questions using Gemini
         let latexContent = '';
         try {
-          // Truncate text if excessively long to prevent timeouts
-          const MAX_TEXT_LENGTH = 150000; // Approx 30-40k tokens
-          const truncatedPdfText = pdfText.length > MAX_TEXT_LENGTH 
-            ? pdfText.substring(0, MAX_TEXT_LENGTH) + '\n...[Text Truncated]...' 
-            : pdfText;
-            
-          console.log(`Sending to Gemini: ${truncatedPdfText.length} chars of content, ${patternText ? patternText.length : 0} chars of pattern`);
-          latexContent = await generateQuestionsWithGemini(truncatedPdfText, metadata, patternText);
+          // Truncate large inputs to avoid prompt-size/model-limit failures (common with big PDFs + pattern PDFs)
+          const MAX_CONTENT_CHARS = 150000; // content PDF text
+          const MAX_PATTERN_CHARS = 60000; // pattern PDF text (structure cues only)
+
+          const contentForPrompt = truncateForPrompt(pdfText, MAX_CONTENT_CHARS, 'CONTENT');
+          const patternForPrompt = patternText
+            ? truncateForPrompt(patternText, MAX_PATTERN_CHARS, 'PATTERN')
+            : null;
+
+          console.log(
+            `Sending to Gemini: content ${contentForPrompt.text.length}/${contentForPrompt.originalLength}` +
+              (contentForPrompt.truncated ? ' (truncated)' : '') +
+              `, pattern ${patternForPrompt ? `${patternForPrompt.text.length}/${patternForPrompt.originalLength}` : 0}` +
+              (patternForPrompt?.truncated ? ' (truncated)' : '')
+          );
+
+          latexContent = await generateQuestionsWithGemini(
+            contentForPrompt.text,
+            metadata,
+            patternForPrompt ? patternForPrompt.text : undefined
+          );
         } catch (geminiError: any) {
           console.error('Gemini API error:', geminiError);
           throw new Error(`AI generation failed: ${geminiError.message || 'Unknown error'}`);

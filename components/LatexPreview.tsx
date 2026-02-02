@@ -238,7 +238,9 @@ export default function LatexPreview({ content, onQuestionsLoaded }: Props) {
   // Convert LaTeX content to HTML-friendly format
   const formatContent = (latex: string) => {
     // Remove documentclass and preamble for preview
-    let formatted = latex
+    let formatted = latex.split('\n').filter(line => !line.trim().startsWith('%')).join('\n');
+    
+    formatted = formatted
       .replace(/\\documentclass(?:\[[^\]]*\])?\{[^}]*\}/g, '')
       .replace(/\\usepackage(?:\[[^\]]*\])?\{[^}]*\}/g, '')
       .replace(/\\geometry\{[^}]*\}/g, '')
