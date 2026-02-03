@@ -39,3 +39,6 @@ next-env.d.ts
 ui_reframed_study_buddy.zip
 study-buddy-project.zip
 sbp.zip
+
+# Local Netlify folder
+.netlify
