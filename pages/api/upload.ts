@@ -11,7 +11,7 @@ export const config = {
     responseLimit: '10mb',
     externalResolver: true,
   },
-  maxDuration: 600, // 10 minutes for Gemini processing
+  maxDuration: 300, // 5 minutes max for Netlify
 };
 
 interface PDFMetadata {
@@ -84,16 +84,24 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          mimeType: 'application/pdf',
-          data: base64Data
+    // Add timeout for PDF extraction
+    const extractTimeout = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('PDF text extraction timed out (60s). Try a smaller or simpler PDF.')), 60000);
+    });
+
+    const result = await Promise.race([
+      model.generateContent([
+        {
+          inlineData: {
+            mimeType: 'application/pdf',
+            data: base64Data
+          }
+        },
+        {
+          text: `Extract all text content from this PDF document. Return ONLY the extracted text without any additional commentary, formatting, or explanations. Preserve the structure and order of the text as it appears in the document.`
         }
-      },
-      {
-        text: `Extract all text content from this PDF document. Return ONLY the extracted text without any additional commentary, formatting, or explanations. Preserve the structure and order of the text as it appears in the document.`
-      }
+      ]),
+      extractTimeout
     ]);
 
     const response = await result.response;
@@ -683,7 +691,7 @@ ${patternSection ? '' : '\n\\documentclass[12pt,a4paper]{article}\n\\usepackage{
 
   console.log('Sending request to Gemini API...');
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Gemini API request timed out after 9 minutes')), 540000);
+    setTimeout(() => reject(new Error('Question generation timed out. Try with a smaller PDF or fewer questions.')), 180000);
   });
 
   const result = await Promise.race([
@@ -832,9 +840,9 @@ export default async function handler(
         // Generate questions using Gemini
         let latexContent = '';
         try {
-          // Truncate large inputs to avoid prompt-size/model-limit failures (common with big PDFs + pattern PDFs)
-          const MAX_CONTENT_CHARS = 150000; // content PDF text
-          const MAX_PATTERN_CHARS = 60000; // pattern PDF text (structure cues only)
+          // Truncate large inputs more aggressively for faster processing
+          const MAX_CONTENT_CHARS = 80000; // Reduced from 150000 for faster processing
+          const MAX_PATTERN_CHARS = 40000; // Reduced from 60000 for faster processing
 
           const contentForPrompt = truncateForPrompt(pdfText, MAX_CONTENT_CHARS, 'CONTENT');
           const patternForPrompt = patternText
