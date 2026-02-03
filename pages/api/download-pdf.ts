@@ -1,11 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execPromise = promisify(exec);
 
 // Sanitize LaTeX to fix common syntax errors
 function sanitizeLatex(latex: string): string {
@@ -134,8 +127,6 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  let tempDir: string | null = null;
-
   try {
     const { latex, includeSolutions = true, subject = 'subject', studentClass = 'class' } = req.body;
 
@@ -177,98 +168,33 @@ export default async function handler(
       processedLatex = processedLatex.replace(/\\subsection\*\{Solution\}/gi, '');
     }
 
-    // Create temporary directory (Vercel/serverless writable path is /tmp)
-    const tmpBaseDir = path.join(os.tmpdir(), 'study-buddy');
-    if (!fs.existsSync(tmpBaseDir)) {
-      fs.mkdirSync(tmpBaseDir, { recursive: true });
-    }
-
-    tempDir = fs.mkdtempSync(path.join(tmpBaseDir, 'latex-'));
-
-    // Check if pdflatex is installed
     try {
-      await execPromise('which pdflatex');
-    } catch (checkError) {
-      return res.status(500).json({
-        error: 'PDF generation is not available. pdflatex is not installed. Please download the LaTeX file instead and compile it locally, or install texlive-latex-base and texlive-latex-extra packages.',
+      // Compile LaTeX to PDF using external service
+      const response = await fetch('https://latex.ytotech.com/builds/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          compiler: 'lualatex',
+          resources: [
+            {
+              main: true,
+              content: processedLatex,
+            },
+          ],
+        }),
       });
-    }
 
-    // Write LaTeX content to file
-    const texFile = path.join(tempDir, 'questions.tex');
-    fs.writeFileSync(texFile, processedLatex, 'utf-8');
-
-    try {
-      // Compile LaTeX to PDF using pdflatex
-      // Run twice to resolve references (standard LaTeX practice)
-      try {
-        await execPromise(
-          `pdflatex -interaction=nonstopmode -output-directory="${tempDir}" "${texFile}"`,
-          { timeout: 30000 }
-        );
-      } catch (firstPassError) {
-        // First pass might fail, but we still want to try second pass
-        console.log('First pdflatex pass completed with warnings/errors');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('LaTeX compilation service error:', errorText);
+        throw new Error(`LaTeX compilation failed: ${response.status} ${response.statusText}`);
       }
 
-      // Second pass to resolve references
-      try {
-        await execPromise(
-          `pdflatex -interaction=nonstopmode -output-directory="${tempDir}" "${texFile}"`,
-          { timeout: 30000 }
-        );
-      } catch (secondPassError) {
-        // Second pass might also have warnings/errors, but check if PDF was created
-        console.log('Second pdflatex pass completed with warnings/errors');
-      }
-
-      const pdfFile = path.join(tempDir, 'questions.pdf');
-
-      if (!fs.existsSync(pdfFile)) {
-        // Check for errors in log file
-        const logFile = path.join(tempDir, 'questions.log');
-        let errorMsg = 'LaTeX compilation failed.';
-        let errorDetails: string[] = [];
-        
-        if (fs.existsSync(logFile)) {
-          const logContent = fs.readFileSync(logFile, 'utf-8');
-          
-          // Extract error lines with more context
-          const lines = logContent.split('\n');
-          for (let i = 0; i < lines.length; i++) {
-            if (lines[i].startsWith('!') || lines[i].includes('Error')) {
-              // Get the error and next 2 lines for context
-              errorDetails.push(lines.slice(i, i + 3).join('\n'));
-            }
-          }
-          
-          if (errorDetails.length > 0) {
-            errorMsg = errorDetails.slice(0, 2).join(' | ').substring(0, 300);
-            console.error('LaTeX compilation errors:', errorDetails.slice(0, 3));
-          }
-          
-          // Also check for specific common errors
-          if (logContent.includes('Missing $ inserted')) {
-            errorMsg = 'LaTeX syntax error: Math mode issue. Please check underscores and special characters.';
-          }
-          if (logContent.includes('Undefined control sequence')) {
-            const match = logContent.match(/Undefined control sequence[.\s\S]{0,100}/);
-            errorMsg = match ? match[0].substring(0, 200) : 'LaTeX syntax error: Invalid command used.';
-          }
-          if (logContent.includes('! Package')) {
-            errorMsg = 'Missing LaTeX package. The generated code uses packages that may not be installed.';
-          }
-          
-          // Save the log file for debugging
-          console.error('Full LaTeX log saved to:', logFile);
-          console.error('LaTeX file:', texFile);
-        }
-        
-        throw new Error(errorMsg);
-      }
-
-      // Read PDF file
-      const pdfData = fs.readFileSync(pdfFile);
+      // Get PDF buffer from response
+      const pdfBuffer = await response.arrayBuffer();
+      const pdfData = Buffer.from(pdfBuffer);
 
       // Format: studdybuddy_subjectname_class_date
       const now = new Date();
@@ -280,33 +206,14 @@ export default async function handler(
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       res.status(200).send(pdfData);
-    } catch (execError: any) {
-      if (execError.code === 'ENOENT') {
-        return res.status(500).json({
-          error: 'PDF compilation not available. pdflatex is not installed. Please download the LaTeX file instead and compile it locally.',
-        });
-      }
-      if (execError.killed) {
-        return res.status(500).json({ error: 'PDF compilation timed out' });
-      }
-      throw execError;
+    } catch (compileError: any) {
+      console.error('LaTeX compilation error:', compileError);
+      throw new Error(`PDF compilation failed: ${compileError.message}`);
     }
   } catch (error: any) {
     console.error('PDF generation error:', error);
-    console.error('Temp directory (preserved for debugging):', tempDir);
     res.status(500).json({ 
       error: `PDF generation failed: ${error.message}` 
     });
-    // Don't clean up on error so we can debug
-    tempDir = null;
-  } finally {
-    // Clean up temporary directory only on success
-    if (tempDir && fs.existsSync(tempDir)) {
-      try {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-      } catch (cleanupError) {
-        console.error('Cleanup error:', cleanupError);
-      }
-    }
   }
 }
