@@ -82,7 +82,7 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
 
     // 4. Use Gemini to extract text from PDF
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     const result = await model.generateContent([
       {
