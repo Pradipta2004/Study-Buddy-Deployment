@@ -70,71 +70,58 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
       throw new Error('File is empty (0 bytes).');
     }
 
-    // 2. Load pdf-parse (v2)
-    let PDFParse;
-    try {
-      // Handle both CommonJS and ES Module environments
-      const pdfModule = require('pdf-parse');
-      PDFParse = pdfModule.PDFParse || pdfModule.default?.PDFParse || pdfModule.default;
-      
-      if (typeof PDFParse !== 'function') {
-         // Fallback: maybe the module itself is the class (rare for v2 but checking)
-         if (typeof pdfModule === 'function') PDFParse = pdfModule; 
+    // 2. Use Gemini's File API for PDF text extraction (serverless-friendly)
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
+
+    // 3. Read file as base64
+    const dataBuffer = fs.readFileSync(filePath);
+    const base64Data = dataBuffer.toString('base64');
+
+    // 4. Use Gemini to extract text from PDF
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          mimeType: 'application/pdf',
+          data: base64Data
+        }
+      },
+      {
+        text: `Extract all text content from this PDF document. Return ONLY the extracted text without any additional commentary, formatting, or explanations. Preserve the structure and order of the text as it appears in the document.`
       }
-    } catch (e) {
-      console.error('Failed to require pdf-parse:', e);
-      throw new Error('Server error: PDF parser library not available.');
-    }
+    ]);
 
-    if (!PDFParse) {
-        throw new Error('Server error: Could not load PDFParse class.');
-    }
-
-    // 3. Read file
-    let dataBuffer;
-    try {
-      dataBuffer = fs.readFileSync(filePath);
-    } catch (e: any) {
-      throw new Error(`Failed to read file from disk: ${e.message}`);
-    }
-    
-    // 4. Parse with timeout (adaptive for large PDFs)
-    // Using v2 API: new PDFParse({ data: buffer })
-    const parserProcess = async () => {
-        const parser = new PDFParse({ data: dataBuffer });
-        const result = await parser.getText();
-        return result.text;
-    };
-
-    // Base 60s, add 15s per 5MB up to 180s.
-    const extra = Math.floor(stats.size / (5 * 1024 * 1024)) * 15000;
-    const timeoutMs = Math.min(180000, Math.max(60000, 60000 + extra));
-
-    const timeoutPromise = new Promise<string>((_, reject) => {
-      setTimeout(() => reject(new Error(`PDF parsing timed out after ${timeoutMs}ms`)), timeoutMs);
-    });
-
-    const text = await Promise.race([parserProcess(), timeoutPromise]);
+    const response = await result.response;
+    const text = response.text();
     
     // 5. Validate result
-    if (typeof text !== 'string') {
-        return "";
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+      throw new Error('No text could be extracted from the PDF');
     }
     
+    console.log(`Successfully extracted ${text.length} characters from PDF using Gemini`);
     return text;
   } catch (error: any) {
     console.error(`Error extracting text from PDF (${filePath}):`, error);
     
     const msg = error.message || String(error);
     
-    if (msg.includes('timed out')) {
-      throw new Error('PDF parsing timed out. The file is too complex or very large.');
+    if (msg.includes('GEMINI_API_KEY')) {
+      throw new Error('API key not configured. Please contact support.');
     }
-    if (msg.includes('PasswordException') || msg.includes('password')) {
-        throw new Error('The PDF is password protected. Please unlock it and try again.');
+    if (msg.includes('password')) {
+      throw new Error('The PDF is password protected. Please unlock it and try again.');
     }
-    if (msg.includes('InvalidPDFException') || msg.includes('Invalid PDF')) {
-        throw new Error('The file is not a valid PDF or is corrupted.');
+    if (msg.includes('Invalid PDF') || msg.includes('not a valid')) {
+      throw new Error('The file is not a valid PDF or is corrupted.');
+    }
+    if (msg.includes('quota') || msg.includes('rate limit')) {
+      throw new Error('API rate limit exceeded. Please try again in a moment.');
     }
     
     throw new Error(`Failed to extract text from PDF: ${msg}`);
