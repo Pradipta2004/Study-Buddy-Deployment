@@ -84,11 +84,13 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-    // Add timeout for PDF extraction
+    // Add timeout for PDF extraction (2 minutes should be enough for most PDFs)
     const extractTimeout = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('PDF text extraction timed out (60s). Try a smaller or simpler PDF.')), 60000);
+      setTimeout(() => reject(new Error('PDF text extraction timed out after 2 minutes. Try a smaller PDF or split it into chapters.')), 120000);
     });
 
+    console.log(`Starting PDF text extraction for file: ${filePath} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`);
+    
     const result = await Promise.race([
       model.generateContent([
         {
