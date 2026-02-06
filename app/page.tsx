@@ -466,18 +466,91 @@ export default function Home() {
       }
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
       // Format: studdybuddy_subjectname_class_date
       const dateStr = new Date().toISOString().split('T')[0];
       const sanitizedSubject = config.subject.toLowerCase().replace(/[^a-z0-9]+/g, '');
       const sanitizedClass = config.studentClass.replace(/[^a-z0-9]+/g, '');
-      a.download = `studdybuddy_${sanitizedSubject}_${sanitizedClass}_${dateStr}.pdf`;
+      const filename = `studdybuddy_${sanitizedSubject}_${sanitizedClass}_${dateStr}.pdf`;
+
+      // Detect mobile/WebView environment
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+      // For mobile/WebView: Use direct URL approach (most compatible)
+      if (isMobile) {
+        try {
+          // Convert blob to ArrayBuffer then to base64
+          const arrayBuffer = await blob.arrayBuffer();
+          const base64 = btoa(
+            new Uint8Array(arrayBuffer).reduce(
+              (data, byte) => data + String.fromCharCode(byte),
+              ''
+            )
+          );
+
+          // Create a direct download link via server
+          const linkResponse = await fetch('/api/get-pdf-link', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              pdfBuffer: base64,
+              filename: filename,
+            }),
+          });
+
+          if (linkResponse.ok) {
+            const { url } = await linkResponse.json();
+            // Open the direct URL - this works in all WebView environments
+            window.open(url, '_blank');
+            setLoading(false);
+            return;
+          }
+        } catch (linkErr) {
+          console.log('Direct link method failed, trying fallback:', linkErr);
+          // Continue to next method
+        }
+
+        // Fallback: data URL in new window
+        try {
+          const reader = new FileReader();
+          reader.onloadend = function() {
+            const base64data = reader.result as string;
+            // Simple redirect to PDF
+            const newWindow = window.open('', '_blank');
+            if (newWindow) {
+              newWindow.location.href = base64data;
+            } else {
+              // If popup blocked, try direct navigation
+              window.location.href = base64data;
+            }
+          };
+          reader.readAsDataURL(blob);
+          
+          await new Promise(resolve => setTimeout(resolve, 500));
+          setLoading(false);
+          return;
+        } catch (err) {
+          console.log('Data URL method failed:', err);
+        }
+      }
+
+      // Desktop/final fallback: Traditional download
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 100);
+
     } catch (err: any) {
       setError(err.message || 'PDF download failed');
     } finally {
