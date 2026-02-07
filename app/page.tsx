@@ -798,7 +798,7 @@ export default function Home() {
                         disabled={loading}
                         className="btn-secondary py-3 px-6 text-base font-bold flex items-center justify-center gap-2 disabled:opacity-50"
                       >
-                        <span>📄</span> Downloadd Questions
+                        <span>📄</span> Download Questions
                       </button>
                       <button
                         onClick={() => handleDownloadPDF(true)}
