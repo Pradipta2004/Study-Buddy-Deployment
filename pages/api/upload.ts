@@ -162,31 +162,50 @@ PAPER DETAILS:
 GENERAL INSTRUCTIONS:
 [List ALL instructions exactly as written in the paper]
 
-SECTIONS AND QUESTIONS:
-For EACH section, provide:
+QUESTION-BY-QUESTION BREAKDOWN:
+For EVERY question in the paper, list it in order:
 
-SECTION [name/letter]:
-- Section title: [exact title]
+Q[number] ([marks] marks):
+- Type: [MCQ / Fill-in-blank / True-False / Column-Matching / Numerical / Short-Answer / Long-Answer / Descriptive / Assertion-Reason / Diagram-based / Proof / Derivation / Case-study]
+- Sub-parts: [if the question has sub-parts (a), (b), (c) etc., list each sub-part's type separately]
+  (a) Type: [type] — Brief description of what is asked
+  (b) Type: [type] — Brief description of what is asked
+- Section: [which section this belongs to, e.g., Section A, Section B]
+- Has OR/choice: [Yes/No — if there's an alternative question]
+- Sample text: [Include the actual question text, preserving math with $...$ notation]
+
+Example:
+Q1 (1 mark):
+- Type: MCQ
+- Section: Section A
+- Has OR/choice: No
+- Sample text: Which of the following is a prime number? (a) 4 (b) 7 (c) 9 (d) 12
+
+Q5 (5 marks):
+- Sub-parts:
+  (a) Type: Numerical — Calculate the area
+  (b) Type: True-False — State whether the statement is true or false
+  (c) Type: Column-Matching — Match Column A with Column B
+  (d) Type: Short-Answer — Define the term
+- Section: Section C
+- Has OR/choice: Yes (OR with Q6)
+
+SECTION SUMMARY:
+For EACH section:
+- Section name: [exact title]
 - Section instructions: [any section-specific instructions]
-- Number of questions: [count]
+- Question number range: [e.g., Q1-Q10]
 - Marks per question: [marks]
-- Question type: [MCQ / Short Answer / Long Answer / Fill-in-blanks / True-False / Numerical / Descriptive / etc.]
-- Question numbering format: [e.g., Q.1, 1., Question 1, (i), etc.]
-- Marks display format: [e.g., [2 marks], (2M), [2], etc.]
-- MCQ option format (if MCQ): [e.g., (a)(b)(c)(d), A. B. C. D., (i)(ii)(iii)(iv)]
-- Sub-parts format (if any): [e.g., (a), (i), a., etc.]
-- Choice/OR options: [e.g., "Answer any 5 out of 7", "OR between Q3 and Q4"]
-- Sample questions from this section (include 2-3 actual questions with full text, preserving any math using LaTeX $...$ notation):
-  Q: [question text]
-  Q: [question text]
+- Question numbering format: [e.g., Q.1, 1., Question 1]
+- Marks display format: [e.g., [2 marks], (2M), [2]]
+- MCQ option format (if any): [e.g., (a)(b)(c)(d)]
 
 FORMATTING NOTES:
 - Paper layout style: [formal board-exam / university-exam / coaching-institute / school-test]
 - Header/footer content: [describe]
 - Visual elements: [boxes, tables, lines, special formatting]
-- Any OR/choice patterns between questions
 
-Be thorough and precise. This analysis will be used to generate a new paper with the IDENTICAL structure.`
+IMPORTANT: Be extremely precise about the TYPE of each question and sub-part. This analysis will be used to generate a new paper where each question MUST be the same type as the original.`
         }
       ]),
       extractTimeout
@@ -853,19 +872,30 @@ ${pdfText}
 
 GENERATION RULES:
 1. Create a COMPLETE, compilable LaTeX document (\\documentclass through \\end{document})
-2. Match the pattern's structure EXACTLY: same sections, same number of questions per section, same marks distribution, same question types
-3. Replicate the pattern's formatting: same numbering style, same marks display format, same header/instruction layout
-4. Generate NEW questions from the textbook content — do NOT copy the sample questions from the pattern
-5. Match the difficulty level: ${difficulty}
-6. For EVERY question, include a solution wrapped in markers:
+2. QUESTION-BY-QUESTION TYPE MATCHING (CRITICAL):
+   - For every question number in the pattern, the generated question at that SAME position MUST be the SAME TYPE.
+   - If pattern Q1(a) is MCQ → generated Q1(a) MUST be MCQ
+   - If pattern Q1(b) is Numerical → generated Q1(b) MUST be Numerical
+   - If pattern Q1(c) is True/False → generated Q1(c) MUST be True/False
+   - If pattern Q2(c) is Column Matching → generated Q2(c) MUST be Column Matching
+   - If pattern Q3 is a Long-Answer with proof → generated Q3 MUST be a Long-Answer with proof
+   - This applies to EVERY question and EVERY sub-part. No exceptions.
+3. Match the pattern's structure EXACTLY: same sections, same number of questions per section, same marks distribution
+4. Replicate the pattern's formatting: same numbering style, same marks display format, same header/instruction layout
+5. Generate NEW questions from the textbook content — do NOT copy the sample questions from the pattern
+6. Match the difficulty level: ${difficulty}
+7. For EVERY question, include a solution wrapped in markers:
    % START SOLUTION
    [Step-by-step solution]
    % END SOLUTION
-7. Use proper LaTeX packages: amsmath, amssymb, geometry, enumitem, fancyhdr
-8. Use $...$ for inline math and \\[...\\] or $$...$$ for display math
-9. For MCQs: use the exact option format from the pattern (e.g., (a)(b)(c)(d))
-10. For fill-in-blanks: use \\underline{\\hspace{3cm}}
-11. For Column Matching: use a LaTeX tabular with Column A and Column B. Shuffle Column B so answers don't align directly. Solution should list correct pairs.
+8. Use proper LaTeX packages: amsmath, amssymb, geometry, enumitem, fancyhdr
+9. Use $...$ for inline math and \\[...\\] or $$...$$ for display math
+10. For MCQs: use the exact option format from the pattern (e.g., (a)(b)(c)(d))
+11. For fill-in-blanks: use \\underline{\\hspace{3cm}}
+12. For True/False: state a clear declarative statement and ask if it's True or False
+13. For Column Matching: use a LaTeX tabular with Column A and Column B. Shuffle Column B so answers don't align directly. Solution should list correct pairs.
+14. For Assertion-Reason: follow the exact assertion-reason format from the pattern
+15. For Numerical: include actual calculations with numbers and units
 
 IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no explanations, no code fences.`
     : `You are an expert ${subject} educator and LaTeX document formatter.
