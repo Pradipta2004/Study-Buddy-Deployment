@@ -359,14 +359,20 @@ export default function Home() {
 
       if (!response.ok) {
         const text = await response.text();
-        let errorMessage = 'Upload failed';
+        let errorMessage = 'Upload failed. Please try again.';
         try {
           const errorData = JSON.parse(text);
           errorMessage = errorData.error || errorMessage;
         } catch {
-          // If the response is HTML (like 504 Gateway Timeout), use a generic message with the status
+          // If the response is HTML (like 504 Gateway Timeout), use a user-friendly message
           if (text.trim().startsWith('<')) {
-            errorMessage = `Server Error (${response.status}): The request timed out or failed.`;
+            if (response.status === 504 || response.status === 408) {
+              errorMessage = 'Request timed out. Try a smaller PDF or fewer questions.';
+            } else if (response.status === 429) {
+              errorMessage = 'Too many requests. Please wait 30 seconds and try again.';
+            } else {
+              errorMessage = `Server Error (${response.status}): The request timed out or failed. Please try again.`;
+            }
           } else {
             errorMessage = text || errorMessage;
           }

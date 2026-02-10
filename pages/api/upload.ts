@@ -59,6 +59,166 @@ function truncateForPrompt(
   };
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: { maxRetries?: number; baseDelay?: number; label?: string } = {}
+): Promise<T> {
+  const { maxRetries = 2, baseDelay = 3000, label = 'operation' } = options;
+  let lastError: Error = new Error(`${label} failed`);
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 0) {
+        const waitTime = baseDelay * Math.pow(2, attempt - 1);
+        console.log(`Retry ${attempt}/${maxRetries} for ${label}, waiting ${waitTime}ms...`);
+        await delay(waitTime);
+      }
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      const msg = (error.message || '').toLowerCase();
+
+      // Don't retry on non-retriable errors
+      if (
+        msg.includes('api key') || msg.includes('password') ||
+        msg.includes('not a valid') || msg.includes('not configured') ||
+        msg.includes('empty (0 bytes)') || msg.includes('file not found') ||
+        msg.includes('no text could be extracted')
+      ) {
+        throw error;
+      }
+
+      // Retry on rate limits, timeouts, and server errors
+      const isRetriable =
+        msg.includes('429') || msg.includes('rate') ||
+        msg.includes('quota') || msg.includes('timeout') || msg.includes('timed out') ||
+        msg.includes('500') || msg.includes('503') || msg.includes('resource_exhausted') ||
+        msg.includes('unavailable') || msg.includes('overloaded') ||
+        msg.includes('internal') || msg.includes('failed to fetch') ||
+        msg.includes('fetch failed') || msg.includes('econnreset') ||
+        msg.includes('socket hang up');
+
+      if (attempt < maxRetries && isRetriable) {
+        console.warn(`Retriable error on attempt ${attempt + 1} for ${label}: ${error.message}`);
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw lastError;
+}
+
+// Specialized pattern analysis: extracts STRUCTURE (not raw text) from a question paper PDF
+async function extractPatternStructure(filePath: string): Promise<string> {
+  try {
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Pattern file not found at: ${filePath}`);
+    }
+    const stats = fs.statSync(filePath);
+    if (stats.size === 0) {
+      throw new Error('Pattern file is empty (0 bytes).');
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
+
+    const dataBuffer = fs.readFileSync(filePath);
+    const base64Data = dataBuffer.toString('base64');
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const extractTimeout = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Pattern analysis timed out after 2 minutes. Try a smaller pattern file.')), 120000);
+    });
+
+    console.log(`Analyzing pattern PDF structure: ${filePath} (${(stats.size / 1024 / 1024).toFixed(2)} MB)`);
+
+    const result = await Promise.race([
+      model.generateContent([
+        { inlineData: { mimeType: 'application/pdf', data: base64Data } },
+        {
+          text: `You are an expert exam paper analyst. Analyze this examination question paper PDF and extract its COMPLETE structure and format.
+
+Return your analysis in this EXACT format:
+
+PAPER HEADER:
+[Exact text of the paper title, institution name, subject, exam name as shown]
+
+PAPER DETAILS:
+- Duration: [time duration]
+- Total Marks: [total marks]
+- Date/Year: [if shown]
+
+GENERAL INSTRUCTIONS:
+[List ALL instructions exactly as written in the paper]
+
+SECTIONS AND QUESTIONS:
+For EACH section, provide:
+
+SECTION [name/letter]:
+- Section title: [exact title]
+- Section instructions: [any section-specific instructions]
+- Number of questions: [count]
+- Marks per question: [marks]
+- Question type: [MCQ / Short Answer / Long Answer / Fill-in-blanks / True-False / Numerical / Descriptive / etc.]
+- Question numbering format: [e.g., Q.1, 1., Question 1, (i), etc.]
+- Marks display format: [e.g., [2 marks], (2M), [2], etc.]
+- MCQ option format (if MCQ): [e.g., (a)(b)(c)(d), A. B. C. D., (i)(ii)(iii)(iv)]
+- Sub-parts format (if any): [e.g., (a), (i), a., etc.]
+- Choice/OR options: [e.g., "Answer any 5 out of 7", "OR between Q3 and Q4"]
+- Sample questions from this section (include 2-3 actual questions with full text, preserving any math using LaTeX $...$ notation):
+  Q: [question text]
+  Q: [question text]
+
+FORMATTING NOTES:
+- Paper layout style: [formal board-exam / university-exam / coaching-institute / school-test]
+- Header/footer content: [describe]
+- Visual elements: [boxes, tables, lines, special formatting]
+- Any OR/choice patterns between questions
+
+Be thorough and precise. This analysis will be used to generate a new paper with the IDENTICAL structure.`
+        }
+      ]),
+      extractTimeout
+    ]);
+
+    const response = await result.response;
+    const text = response.text();
+
+    if (!text || text.trim().length === 0) {
+      throw new Error('Could not analyze the pattern PDF structure. The file may be image-only — try a text-based PDF.');
+    }
+
+    console.log(`Pattern structure analysis complete. Length: ${text.length} chars`);
+    return text;
+  } catch (error: any) {
+    console.error(`Error analyzing pattern PDF (${filePath}):`, error);
+
+    const msg = error.message || String(error);
+
+    if (msg.includes('GEMINI_API_KEY') || msg.includes('not configured')) {
+      throw new Error('API key not configured. Please contact support.');
+    }
+    if (msg.includes('password')) {
+      throw new Error('The pattern PDF is password protected. Please unlock it and try again.');
+    }
+    if (msg.includes('quota') || msg.includes('rate limit')) {
+      throw new Error('API rate limit exceeded. Please wait a moment and try again.');
+    }
+
+    throw new Error(`Failed to analyze pattern PDF: ${msg}`);
+  }
+}
+
 async function extractTextFromPDF(filePath: string): Promise<string> {
   try {
     // 1. Validate file existence and size
@@ -676,20 +836,123 @@ EXAMPLES:
 `;
 
   const patternSection = patternText
-    ? `\n\n=== CRITICAL: QUESTION PAPER PATTERN TO REPLICATE EXACTLY ===\n\n${patternText}\n\n=== END OF PATTERN ===\n\nYOU MUST ANALYZE AND REPLICATE THIS PATTERN PRECISELY:\n\n1. STRUCTURE ANALYSIS:\n   - Identify all section divisions (Section A, B, C, etc.)\n   - Note the exact numbering format (Q.1, Question 1, 1., etc.)\n   - Observe spacing between questions\n   - Identify header/footer format\n\n2. MARK DISTRIBUTION:\n   - Count questions in each mark category\n   - Note how marks are indicated [X marks], (X), etc.\n   - Match the total marks and time duration\n\n3. QUESTION FORMAT:\n   - Replicate the exact question phrasing style\n   - Match MCQ format: (a), (b), (c), (d) OR A., B., C., D.\n   - Use same indentation and spacing\n   - Copy the instruction format exactly\n\n4. LAYOUT ELEMENTS:\n   - Replicate header boxes and borders\n   - Match font styles (\\\\textbf, \\\\large, etc.)\n   - Use same page margins and geometry\n   - Include any tables, rules, or decorative elements\n\n5. CONTENT STYLE:\n   - Match the difficulty level shown in pattern\n   - Use similar language and terminology\n   - Keep question lengths comparable\n   - Maintain same level of detail\n\nYOUR GENERATED OUTPUT MUST BE VISUALLY AND STRUCTURALLY INDISTINGUISHABLE FROM THE PATTERN.`
+    ? `\n\n=== QUESTION PAPER PATTERN ANALYSIS ===\n\n${patternText}\n\n=== END OF PATTERN ANALYSIS ===`
     : '';
 
-  const prompt = `
-You are an expert ${subject} educator and LaTeX document formatter.
+  const prompt = patternText
+    ? `You are an expert ${subject} educator and professional LaTeX exam paper creator.
 
-${patternSection ? '>>> PRIORITY 1: PATTERN MATCHING <<<\n' + patternSection + '\n\n>>> PRIORITY 2: CONTENT SOURCE <<<\n' : ''}Content:
+TASK: Generate a NEW exam question paper that EXACTLY replicates the structure and format described in the pattern analysis below, using ONLY content from the provided textbook material.
+
+${patternSection}
+
+TEXTBOOK CONTENT (source for new questions):
 ${pdfText}
-${patternSection ? '' : '\n\nPlease generate high-quality ' + subject + ' questions based on this content.' + questionBreakdown}
 
-${patternText ? '\n\n>>> GENERATION INSTRUCTIONS <<<\n\nYou MUST:\n1. Extract the EXACT LaTeX structure from the pattern above\n2. Keep ALL formatting elements: \\\\documentclass, \\\\usepackage, \\\\geometry, headers, footers, boxes, tables, rules\n3. Maintain the EXACT question numbering and section format\n4. Match the mark distribution precisely\n5. Generate NEW questions (from the content PDF) that fit this EXACT format\n6. Use the same spacing, fonts, and layout\n7. WRAP EVERY SOLUTION in specific markers: Put "% START SOLUTION" before the solution starts and "% END SOLUTION" after it ends.\n   - If the pattern has solutions, use the EXACT visual format found in the pattern inside these markers.\n   - If the pattern DOES NOT have solutions, you MUST generate them anyway using this format inside the markers:\n     \\subsection*{Solution}\n     [Step-by-step solution content]\n\nYour output should be ready-to-compile LaTeX that looks IDENTICAL to the pattern but with new questions from the content.' : 'Question Requirements:\n- Question types: ' + questionTypeDesc + '\n- Difficulty level: ' + difficulty + '\n- Each question should be clear and well-formatted\n- Provide detailed step-by-step solutions\n- Use proper LaTeX notation for all mathematical expressions' + customInstructionsSection + '\n\nFormat your response ENTIRELY in LaTeX using this EXACT structure for a proper exam paper:'}
+GENERATION RULES:
+1. Create a COMPLETE, compilable LaTeX document (\\documentclass through \\end{document})
+2. Match the pattern's structure EXACTLY: same sections, same number of questions per section, same marks distribution, same question types
+3. Replicate the pattern's formatting: same numbering style, same marks display format, same header/instruction layout
+4. Generate NEW questions from the textbook content — do NOT copy the sample questions from the pattern
+5. Match the difficulty level: ${difficulty}
+6. For EVERY question, include a solution wrapped in markers:
+   % START SOLUTION
+   [Step-by-step solution]
+   % END SOLUTION
+7. Use proper LaTeX packages: amsmath, amssymb, geometry, enumitem, fancyhdr
+8. Use $...$ for inline math and \\[...\\] or $$...$$ for display math
+9. For MCQs: use the exact option format from the pattern (e.g., (a)(b)(c)(d))
+10. For fill-in-blanks: use \\underline{\\hspace{3cm}}
 
-${patternSection ? '' : '\n\\documentclass[12pt,a4paper]{article}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n\\usepackage{geometry}\n\\usepackage{enumitem}\n\\usepackage{fancyhdr}\n\\usepackage{graphicx}\n\\geometry{margin=0.75in, top=1in, bottom=1in}\n\n\\pagestyle{fancy}\n\\fancyhf{}\n\\fancyhead[L]{\\textbf{' + subject.charAt(0).toUpperCase() + subject.slice(1) + ' Examination}}\n\\fancyhead[R]{\\textbf{Page \\thepage}}\n\\fancyfoot[C]{\\small All questions carry marks as indicated}\n\n\\begin{document}\n\n% Header Section\n\\begin{center}\n{\\Large \\textbf{EXAMINATION PAPER}}\\\\[0.3cm]\n{\\large \\textbf{Subject: ' + subject.charAt(0).toUpperCase() + subject.slice(1) + '}}\\\\[0.2cm]\n{\\textbf{Difficulty Level: ' + difficulty.charAt(0).toUpperCase() + difficulty.slice(1) + '}}\\\\[0.2cm]\n\\rule{\\textwidth}{0.4pt}\n\\end{center}\n\n\\vspace{0.3cm}\n\n% Instructions Box\n\\noindent\\fbox{\\parbox{\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule}{\n\\textbf{INSTRUCTIONS TO CANDIDATES:}\\\\[0.2cm]\n\\begin{itemize}[leftmargin=*, itemsep=0pt]\n\\item Read all questions carefully before attempting.\n\\item Answer all questions in the space provided or on separate sheets.\n\\item Show all working for full credit.\n\\item Marks for each question are indicated in brackets.\n\\item Use of calculator is permitted (if applicable).\n' + (questionBreakdown ? '\\item ' + questionBreakdown.replace(/\n/g, '\n\\item ').replace('1 Mark Questions:', '\\textbf{Section A:} 1 Mark Questions').replace('Questions by Marks:', '\\textbf{Section B:} Higher Mark Questions') : '') + '\n\\end{itemize}\n}}\n\n\\vspace{0.5cm}\n\n% Questions Section\n\\section*{QUESTIONS}\n\n[Now generate each question using this EXACT format:\n\n\\subsection*{Question 1 [X marks]}\n[Question text with proper LaTeX math formatting]\n\n% START SOLUTION\n\\subsection*{Solution}\n[Detailed solution with step-by-step explanation]\n% END SOLUTION\n\n\\vspace{0.5cm}\n\nRepeat for all questions, ensuring proper numbering and mark allocation.]\n\n\\end{document}\n\nCRITICAL FORMATTING REQUIREMENTS:\n- Use \\subsection*{Question N [X marks]} for each question header\n- Use \\subsection*{Solution} for each solution\n- Wrap EVERY solution with % START SOLUTION and % END SOLUTION comments\n- Use $...$ for inline math and $$...$$ or \\[...\\] for display math\n- For MCQs: Use (a), (b), (c), (d) format\n- For Fill in Blanks: Use \\underline{\\hspace{3cm}} for blanks\n- Add \\vspace{0.5cm} between questions for spacing\n- Make questions relevant to the provided content\n- STRICTLY follow the custom instructions if provided\n- Number questions consecutively starting from 1'}
-`;
+IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no explanations, no code fences.`
+    : `You are an expert ${subject} educator and LaTeX document formatter.
+
+Content:
+${pdfText}
+
+Please generate high-quality ${subject} questions based on this content.${questionBreakdown}
+
+Question Requirements:
+- Question types: ${questionTypeDesc}
+- Difficulty level: ${difficulty}
+- Each question should be clear and well-formatted
+- Provide detailed step-by-step solutions
+- Use proper LaTeX notation for all mathematical expressions${customInstructionsSection}
+
+Format your response ENTIRELY in LaTeX using this EXACT structure for a proper exam paper:
+
+\\documentclass[12pt,a4paper]{article}
+\\usepackage{amsmath}
+\\usepackage{amssymb}
+\\usepackage{geometry}
+\\usepackage{enumitem}
+\\usepackage{fancyhdr}
+\\usepackage{graphicx}
+\\geometry{margin=0.75in, top=1in, bottom=1in}
+
+\\pagestyle{fancy}
+\\fancyhf{}
+\\fancyhead[L]{\\textbf{${subject.charAt(0).toUpperCase() + subject.slice(1)} Examination}}
+\\fancyhead[R]{\\textbf{Page \\thepage}}
+\\fancyfoot[C]{\\small All questions carry marks as indicated}
+
+\\begin{document}
+
+% Header Section
+\\begin{center}
+{\\Large \\textbf{EXAMINATION PAPER}}\\\\[0.3cm]
+{\\large \\textbf{Subject: ${subject.charAt(0).toUpperCase() + subject.slice(1)}}}\\\\[0.2cm]
+{\\textbf{Difficulty Level: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}}}\\\\[0.2cm]
+\\rule{\\textwidth}{0.4pt}
+\\end{center}
+
+\\vspace{0.3cm}
+
+% Instructions Box
+\\noindent\\fbox{\\parbox{\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule}{
+\\textbf{INSTRUCTIONS TO CANDIDATES:}\\\\[0.2cm]
+\\begin{itemize}[leftmargin=*, itemsep=0pt]
+\\item Read all questions carefully before attempting.
+\\item Answer all questions in the space provided or on separate sheets.
+\\item Show all working for full credit.
+\\item Marks for each question are indicated in brackets.
+\\item Use of calculator is permitted (if applicable).
+${questionBreakdown ? '\\item ' + questionBreakdown.replace(/\n/g, '\n\\item ').replace('1 Mark Questions:', '\\textbf{Section A:} 1 Mark Questions').replace('Questions by Marks:', '\\textbf{Section B:} Higher Mark Questions') : ''}
+\\end{itemize}
+}}
+
+\\vspace{0.5cm}
+
+% Questions Section
+\\section*{QUESTIONS}
+
+[Now generate each question using this EXACT format:
+
+\\subsection*{Question 1 [X marks]}
+[Question text with proper LaTeX math formatting]
+
+% START SOLUTION
+\\subsection*{Solution}
+[Detailed solution with step-by-step explanation]
+% END SOLUTION
+
+\\vspace{0.5cm}
+
+Repeat for all questions, ensuring proper numbering and mark allocation.]
+
+\\end{document}
+
+CRITICAL FORMATTING REQUIREMENTS:
+- Use \\subsection*{Question N [X marks]} for each question header
+- Use \\subsection*{Solution} for each solution
+- Wrap EVERY solution with % START SOLUTION and % END SOLUTION comments
+- Use $...$ for inline math and $$...$$ or \\[...\\] for display math
+- For MCQs: Use (a), (b), (c), (d) format
+- For Fill in Blanks: Use \\underline{\\hspace{3cm}} for blanks
+- Add \\vspace{0.5cm} between questions for spacing
+- Make questions relevant to the provided content
+- STRICTLY follow the custom instructions if provided
+- Number questions consecutively starting from 1`;
 
   console.log('Sending request to Gemini API...');
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -787,85 +1050,96 @@ export default async function handler(
           }
         }
 
-        // Extract text from PDF
-        console.log('Extracting text from PDF...');
-        const pdfText = await extractTextFromPDF(filePath);
+        // Extract text from PDF(s) — run in PARALLEL for pattern mode to save time
+        // Use retry logic to handle transient Gemini rate limits / server errors
+        console.log('Starting PDF extraction...' + (patternFilePath ? ' (parallel: content + pattern)' : ''));
+
+        const contentPromise = withRetry(
+          () => extractTextFromPDF(filePath),
+          { maxRetries: 2, baseDelay: 3000, label: 'content-extraction' }
+        );
+
+        // For pattern mode: use specialized structure extractor (not raw text)
+        // This produces a compact structural analysis instead of huge raw text
+        const patternPromise = patternFilePath
+          ? withRetry(
+              () => extractPatternStructure(patternFilePath),
+              { maxRetries: 2, baseDelay: 4000, label: 'pattern-analysis' }
+            )
+          : Promise.resolve(undefined);
+
+        let pdfText: string;
+        let patternText: string | undefined;
+
+        try {
+          [pdfText, patternText] = await Promise.all([contentPromise, patternPromise]);
+        } catch (extractionError: any) {
+          // Clean up uploaded files on extraction failure
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          if (patternFilePath && fs.existsSync(patternFilePath)) fs.unlinkSync(patternFilePath);
+
+          const msg = extractionError.message || 'PDF extraction failed';
+          console.error('Extraction error:', msg);
+
+          // Provide user-friendly error messages
+          if (msg.includes('rate limit') || msg.includes('quota') || msg.includes('429')) {
+            return res.status(429).json({ error: 'API rate limit reached. Please wait 30 seconds and try again.' });
+          }
+          if (msg.includes('timed out') || msg.includes('timeout')) {
+            return res.status(504).json({ error: 'PDF processing timed out. Try a smaller PDF file.' });
+          }
+          return res.status(500).json({ error: msg });
+        }
+
         console.log('PDF text extraction complete. Length:', pdfText.length);
+        if (patternText) {
+          console.log('Pattern analysis complete. Length:', patternText.length);
+        }
 
         if (!pdfText.trim()) {
-          // Clean up uploaded files
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-          }
-          if (patternFilePath && fs.existsSync(patternFilePath)) {
-            fs.unlinkSync(patternFilePath);
-          }
-          return res.status(400).json({ error: 'Could not extract text from PDF' });
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          if (patternFilePath && fs.existsSync(patternFilePath)) fs.unlinkSync(patternFilePath);
+          return res.status(400).json({ error: 'Could not extract text from PDF. The file may be image-only or corrupted.' });
         }
 
-        // Extract pattern text if pattern file provided
-        let patternText: string | undefined;
-        if (patternFilePath) {
-          try {
-            console.log('Extracting pattern text...');
-            patternText = await extractTextFromPDF(patternFilePath);
-            console.log('Pattern text extraction complete. Raw length:', patternText.length);
-            
-            if (!patternText || patternText.trim().length === 0) {
-               throw new Error('Pattern PDF contains no selectable text. If this is a scanned document/image, please convert it to a searchable PDF (OCR) first.');
-            }
-
-            // Clean pattern text to remove OCR artifacts and comment lines
-            if (patternText) {
-              patternText = patternText
-                .split('\n')
-                .filter(line => {
-                  const trimmed = line.trim();
-                  // Remove lines that are just comments or metadata
-                  if (trimmed.startsWith('%')) return false;
-                  if (trimmed.match(/^(For|Adjusted|No rule|Rule at|Small space|Clear all|To fit|Apply|Various|Custom list)/i)) return false;
-                  // Keep meaningful content
-                  return trimmed.length > 0;
-                })
-                .join('\n')
-                .trim();
-              
-              console.log('Pattern text cleaned. Length:', patternText.length);
-            }
-          } catch (error: any) {
-            console.error('Error extracting pattern text:', error);
-            // Re-throw valid errors so the user knows why their pattern failed
-            throw new Error(`Failed to process Pattern PDF: ${error.message}`);
-          }
-        }
-
-        // Generate questions using Gemini
+        // Generate questions using Gemini (with delay to avoid rate limits after extraction)
         let latexContent = '';
         try {
-          // Truncate large inputs more aggressively for faster processing
-          const MAX_CONTENT_CHARS = 80000; // Reduced from 150000 for faster processing
-          const MAX_PATTERN_CHARS = 40000; // Reduced from 60000 for faster processing
+          // Use smaller content limit when pattern is present (pattern analysis is already compact)
+          const MAX_CONTENT_CHARS = patternText ? 50000 : 80000;
 
           const contentForPrompt = truncateForPrompt(pdfText, MAX_CONTENT_CHARS, 'CONTENT');
-          const patternForPrompt = patternText
-            ? truncateForPrompt(patternText, MAX_PATTERN_CHARS, 'PATTERN')
-            : null;
 
           console.log(
             `Sending to Gemini: content ${contentForPrompt.text.length}/${contentForPrompt.originalLength}` +
               (contentForPrompt.truncated ? ' (truncated)' : '') +
-              `, pattern ${patternForPrompt ? `${patternForPrompt.text.length}/${patternForPrompt.originalLength}` : 0}` +
-              (patternForPrompt?.truncated ? ' (truncated)' : '')
+              `, pattern analysis ${patternText ? patternText.length : 0} chars`
           );
 
-          latexContent = await generateQuestionsWithGemini(
-            contentForPrompt.text,
-            metadata,
-            patternForPrompt ? patternForPrompt.text : undefined
+          // Add delay before generation to avoid rate limits (especially after parallel extraction)
+          if (patternText) {
+            console.log('Waiting 2s before generation to avoid rate limits...');
+            await delay(2000);
+          }
+
+          latexContent = await withRetry(
+            () => generateQuestionsWithGemini(
+              contentForPrompt.text,
+              metadata,
+              patternText || undefined
+            ),
+            { maxRetries: 1, baseDelay: 5000, label: 'question-generation' }
           );
         } catch (geminiError: any) {
           console.error('Gemini API error:', geminiError);
-          throw new Error(`AI generation failed: ${geminiError.message || 'Unknown error'}`);
+          const msg = geminiError.message || 'Unknown error';
+          if (msg.includes('rate') || msg.includes('quota') || msg.includes('429')) {
+            throw new Error('AI service rate limit reached. Please wait a minute and try again.');
+          }
+          if (msg.includes('timed out') || msg.includes('timeout')) {
+            throw new Error('Question generation timed out. Try with a smaller textbook PDF.');
+          }
+          throw new Error(`AI generation failed: ${msg}`);
         }
 
         if (!latexContent || latexContent.trim().length === 0) {
