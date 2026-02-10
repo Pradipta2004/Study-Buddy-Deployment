@@ -14,6 +14,7 @@ interface QuestionConfig {
     mcq: number;
     fillInBlanks: number;
     trueFalse: number;
+    columnMatching: number;
     general: number;
   };
   questionsByMarks?: {

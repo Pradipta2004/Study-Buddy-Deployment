@@ -23,6 +23,7 @@ interface PDFMetadata {
     mcq: number;
     fillInBlanks: number;
     trueFalse: number;
+    columnMatching: number;
     general: number;
   };
   questionsByMarks?: {
@@ -326,6 +327,7 @@ async function generateQuestionsWithGemini(
     if (types.mcq > 0) parts.push(`${types.mcq} Multiple Choice Questions (MCQ)`);
     if (types.fillInBlanks > 0) parts.push(`${types.fillInBlanks} Fill in the Blanks questions`);
     if (types.trueFalse > 0) parts.push(`${types.trueFalse} True/False questions`);
+    if (types.columnMatching > 0) parts.push(`${types.columnMatching} Column Matching questions (Match Column A with Column B in a table format)`);
     if (types.general > 0) parts.push(`${types.general} General questions`);
     
     if (parts.length > 0) {
@@ -863,6 +865,7 @@ GENERATION RULES:
 8. Use $...$ for inline math and \\[...\\] or $$...$$ for display math
 9. For MCQs: use the exact option format from the pattern (e.g., (a)(b)(c)(d))
 10. For fill-in-blanks: use \\underline{\\hspace{3cm}}
+11. For Column Matching: use a LaTeX tabular with Column A and Column B. Shuffle Column B so answers don't align directly. Solution should list correct pairs.
 
 IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no explanations, no code fences.`
     : `You are an expert ${subject} educator and LaTeX document formatter.
@@ -949,6 +952,16 @@ CRITICAL FORMATTING REQUIREMENTS:
 - Use $...$ for inline math and $$...$$ or \\[...\\] for display math
 - For MCQs: Use (a), (b), (c), (d) format
 - For Fill in Blanks: Use \\underline{\\hspace{3cm}} for blanks
+- For Column Matching: Use a proper LaTeX table with two columns (Column A and Column B). Format example:
+  \\begin{tabular}{|c|p{5cm}|c|p{5cm}|}
+  \\hline
+  \\textbf{Column A} & & \\textbf{Column B} & \\\\
+  \\hline
+  (i) & Item 1 & (a) & Match 1 \\\\
+  (ii) & Item 2 & (b) & Match 2 \\\\
+  \\hline
+  \\end{tabular}
+  Shuffle Column B so it does NOT directly align with Column A. The solution should list correct pairs like (i)-(c), (ii)-(a), etc.
 - Add \\vspace{0.5cm} between questions for spacing
 - Make questions relevant to the provided content
 - STRICTLY follow the custom instructions if provided

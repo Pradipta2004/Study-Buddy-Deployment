@@ -13,11 +13,36 @@ function sanitizeLatex(latex: string): string {
   sanitized = sanitized.replace(/\\begin\{enumerate\}\[1\)\]/g, '\\begin{enumerate}[label=\\arabic*)]');
   
   // Fix bare underscores outside math mode
-  // First, protect math mode content
+  // First, protect math mode content and tabular environments
   const mathBlocks: string[] = [];
   const verbatimBlocks: string[] = [];
+  const tabularBlocks: string[] = [];
   let counter = 0;
   
+  // Temporarily replace tabular/table environments (they use & as column separator)
+  sanitized = sanitized.replace(/\\begin\{tabular\}(\[[^\]]*\])?\{[^}]*\}[\s\S]*?\\end\{tabular\}/g, (match) => {
+    const placeholder = `TABULARBLOCK${counter}`;
+    tabularBlocks[counter] = match;
+    counter++;
+    return placeholder;
+  });
+  
+  // Also protect longtable environments
+  sanitized = sanitized.replace(/\\begin\{longtable\}(\[[^\]]*\])?\{[^}]*\}[\s\S]*?\\end\{longtable\}/g, (match) => {
+    const placeholder = `TABULARBLOCK${counter}`;
+    tabularBlocks[counter] = match;
+    counter++;
+    return placeholder;
+  });
+  
+  // Also protect array environments (used in math for column alignment)
+  sanitized = sanitized.replace(/\\begin\{array\}\{[^}]*\}[\s\S]*?\\end\{array\}/g, (match) => {
+    const placeholder = `TABULARBLOCK${counter}`;
+    tabularBlocks[counter] = match;
+    counter++;
+    return placeholder;
+  });
+
   // Temporarily replace inline math
   sanitized = sanitized.replace(/\$([^$]+)\$/g, (match) => {
     const placeholder = `MATHBLOCK${counter}`;
@@ -86,13 +111,16 @@ function sanitizeLatex(latex: string): string {
     return `\\underline{\\hspace{${length}cm}}`;
   });
   
-  // Restore math blocks
+  // Restore math blocks and tabular blocks
   for (let i = counter - 1; i >= 0; i--) {
     if (mathBlocks[i]) {
       sanitized = sanitized.replace(`MATHBLOCK${i}`, mathBlocks[i]);
     }
     if (verbatimBlocks[i]) {
       sanitized = sanitized.replace(`VERBBLOCK${i}`, verbatimBlocks[i]);
+    }
+    if (tabularBlocks[i]) {
+      sanitized = sanitized.replace(`TABULARBLOCK${i}`, tabularBlocks[i]);
     }
   }
   

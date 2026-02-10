@@ -13,6 +13,7 @@ interface QuestionConfig {
     mcq: number;
     fillInBlanks: number;
     trueFalse: number;
+    columnMatching: number;
     general: number;
   };
   questionsByMarks?: {
@@ -294,7 +295,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
   const MAX_QUESTIONS_BY_MARKS = 20;
 
   const handleQuestionTypeCountChange = (type: keyof NonNullable<QuestionConfig['questionsByType']>, delta: number) => {
-    const current = config.questionsByType || { mcq: 0, fillInBlanks: 0, trueFalse: 0, general: 0 };
+    const current = config.questionsByType || { mcq: 0, fillInBlanks: 0, trueFalse: 0, columnMatching: 0, general: 0 };
     let newValue = Math.max(0, (current[type] || 0) + delta);
     
     const newErrors = { ...errorMessages };
@@ -327,7 +328,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
     
     onConfigChange({
       ...config,
-      questionsByType: { ...config.questionsByType || { mcq: 0, fillInBlanks: 0, trueFalse: 0, general: 0 }, [type]: finalValue }
+      questionsByType: { ...config.questionsByType || { mcq: 0, fillInBlanks: 0, trueFalse: 0, columnMatching: 0, general: 0 }, [type]: finalValue }
     });
   };
 
@@ -370,8 +371,8 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
   };
 
   const getTotalQuestionsByType = () => {
-    const types = config.questionsByType || { mcq: 0, fillInBlanks: 0, trueFalse: 0, general: 0 };
-    return types.mcq + types.fillInBlanks + types.trueFalse + types.general;
+    const types = config.questionsByType || { mcq: 0, fillInBlanks: 0, trueFalse: 0, columnMatching: 0, general: 0 };
+    return types.mcq + types.fillInBlanks + types.trueFalse + types.columnMatching + types.general;
   };
 
   const getTotalQuestionsByMarks = () => {
@@ -394,6 +395,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
             { key: 'mcq' as const, label: 'MCQ' },
             { key: 'trueFalse' as const, label: 'True/False' },
             { key: 'fillInBlanks' as const, label: 'Fill in the Blanks' },
+            { key: 'columnMatching' as const, label: 'Column Matching' },
             { key: 'general' as const, label: 'Short Answer Type' }
           ].map(item => (
             <div key={item.key}>
