@@ -28,27 +28,28 @@ interface QuestionConfig {
 }
 
 const MOTIVATIONAL_QUOTES = [
-  "Every question is a chance to learn something new! 🌟",
-  "Your hard work today is your success tomorrow! 💪",
-  "Stay focused and ace this test! 🎯",
-  "Believe in yourself, you've got this! 🌈",
-  "Progress is progress, no matter how small! ✨",
-  "Knowledge is the greatest treasure! 💎",
-  "You are capable of amazing things! 🚀",
-  "Excellence comes from practice and patience! 📚",
-  "Your potential is limitless! 🎆",
-  "Every mistake is a learning opportunity! 🧠",
-  "Confidence comes from preparation! 💡",
-  "You're stronger than you think! 💫",
-  "Success is earned, not given! 🏆",
-  "Keep pushing, you're almost there! 🎉",
-  "Your effort will pay off! 🌟",
-  "The best version of you is yet to come! 🌺",
-  "Learning today leads to success tomorrow! 📖",
-  "You've got the power to succeed! ⚡",
-  "Never underestimate your abilities! 🌟",
-  "Your dedication will take you far! 🛤️",
+  "Every question = free XP for your brain. Level up! 🧠✨",
+  "You’re building your main character arc today. Keep grinding 💪🔥",
+  "Lock in. Focus mode = beast mode. 🎯😤",
+  "Self-belief is your real superpower. Use it. ⚡😎",
+  "Small wins still slap. Progress is progress. 🚀✨",
+  "Knowledge = ultimate flex. Stack it up. 💎📚",
+  "You’re lowkey capable of insane things. Don’t forget that 🚀😌",
+  "Practice now, dominate later. That’s the formula. 📈🔥",
+  "Your potential? Literally no limit detected. 🌌✨",
+  "Mistakes are just plot twists in your success story 🎬🧠",
+  "Prep hard, walk in confident. Easy combo 💡😎",
+  "You’re stronger than your excuses. Facts. 💫🔥",
+  "Success isn’t gifted — it’s earned. Go claim it 🏆⚡",
+  "Don’t stop now… you’re THIS close 🤏🎉",
+  "The effort you put in today will flex tomorrow 💪🌟",
+  "Your glow-up is still loading… stay tuned ✨🌺",
+  "Study now, future you will be obsessed with you 📖😌",
+  "You’ve got main character energy. Use it ⚡🎬",
+  "You’re way more capable than you think. No debate 🌟😤",
+  "Consistency today = legendary results tomorrow 🛤️🔥",
 ];
+
 
 const EXAM_QUOTES = [
   "You've prepared well. Trust yourself! 🎓",
@@ -671,7 +672,10 @@ export default function Home() {
                         <p className="text-xs text-green-600 mt-1">✓ Loaded</p>
                       </div>
                     ) : (
-                      <p className="text-sm md:text-base text-gray-600">Click to upload sample paper</p>
+                      <>
+                        <p className="text-sm md:text-base text-gray-600">Click to upload sample paper</p>
+                        <p className="text-xs text-red-600 font-semibold mt-1">Max: 1MB</p>
+                      </>
                     )}
                     <input
                       ref={patternFileInputRef}
@@ -702,7 +706,7 @@ export default function Home() {
                   <p className="text-base md:text-lg text-gray-700 font-semibold mb-2">
                     {file ? <span className="text-blue-600">{file.name}</span> : 'Drag PDF or click to Upload'}
                   </p>
-                  <p className="text-xs md:text-sm text-red-600 font-semibold">Max 64MB</p>
+                  <p className="text-xs md:text-sm text-red-600 font-semibold">Max 7 MB</p>
                   <input
                     ref={fileInputRef}
                     type="file"

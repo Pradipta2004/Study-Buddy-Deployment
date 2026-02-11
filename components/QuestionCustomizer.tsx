@@ -34,25 +34,25 @@ interface Props {
 
 const SUBJECTS = [
   { value: 'mathematics', label: '📐 Mathematics', levels: ['secondary', 'higher-secondary', 'college'] },
-  { value: 'general-science', label: '🔬 General Science', levels: ['secondary'] },
+  { value: 'physical-science', label: '⚛️ Physical Science', levels: ['secondary'] },
+  { value: 'life-science', label: '🧬 Life Science', levels: ['secondary'] },
   { value: 'english', label: '📚 English', levels: ['secondary', 'higher-secondary', 'college'] },
-  { value: 'hindi', label: '🇮🇳 Hindi', levels: ['secondary', 'higher-secondary'] },
-  { value: 'social-science', label: '🌍 Social Science', levels: ['secondary'] },
+  { value: 'history', label: '📜 History', levels: ['secondary', 'higher-secondary', 'college'] },
+  { value: 'geography', label: '🗺️ Geography', levels: ['secondary', 'higher-secondary', 'college'] },
+  { value: 'economics', label: '💰 Economics', levels: ['secondary', 'higher-secondary', 'college'] },
   { value: 'computer-science', label: '💻 Computer Science', levels: ['secondary', 'higher-secondary', 'college'] },
-  { value: 'sanskrit', label: '�️ Sanskrit', levels: ['secondary', 'higher-secondary'] },
-  { value: 'environmental-science', label: '� Environmental Science', levels: ['secondary', 'college'] },
+  { value: 'environmental-science', label: '🌱 Environmental Science', levels: ['secondary', 'college'] },
+
   { value: 'physics', label: '⚛️ Physics', levels: ['higher-secondary', 'college'] },
   { value: 'chemistry', label: '🧪 Chemistry', levels: ['higher-secondary', 'college'] },
   { value: 'biology', label: '🧬 Biology', levels: ['higher-secondary', 'college'] },
-  { value: 'history', label: '📜 History', levels: ['higher-secondary', 'college'] },
-  { value: 'geography', label: '🗺️ Geography', levels: ['higher-secondary', 'college'] },
   { value: 'political-science', label: '🏛️ Political Science', levels: ['higher-secondary', 'college'] },
-  { value: 'economics', label: '💰 Economics', levels: ['higher-secondary', 'college'] },
   { value: 'accountancy', label: '📊 Accountancy', levels: ['higher-secondary', 'college'] },
   { value: 'business-studies', label: '💼 Business Studies', levels: ['higher-secondary', 'college'] },
   { value: 'psychology', label: '🧠 Psychology', levels: ['higher-secondary', 'college'] },
   { value: 'sociology', label: '👥 Sociology', levels: ['higher-secondary', 'college'] },
   { value: 'physical-education', label: '⚽ Physical Education', levels: ['higher-secondary'] },
+
   { value: 'statistics', label: '📈 Statistics', levels: ['college'] },
   { value: 'engineering', label: '⚙️ Engineering', levels: ['college'] },
   { value: 'philosophy', label: '💭 Philosophy', levels: ['college'] },
@@ -60,6 +60,7 @@ const SUBJECTS = [
   { value: 'medical-science', label: '🏥 Medical Science', levels: ['college'] },
   { value: 'commerce', label: '💳 Commerce', levels: ['college'] },
 ];
+
 
 const DIFFICULTIES = [
   { value: 'easy', label: '🟢 easy' },
