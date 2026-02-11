@@ -57,6 +57,21 @@ const EXAM_QUOTES = [
   "Success is yours for the taking! 🏅",
 ];
 
+const FEEDBACK_CLASSES = [
+  'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8',
+  'Class 9', 'Class 10', 'Class 11', 'Class 12', 'College/University',
+];
+
+const FEEDBACK_SUBJECTS = [
+  'Mathematics', 'Physics', 'Chemistry', 'Biology',
+  'Physical Science', 'Life Science', 'English', 'History',
+  'Geography', 'Economics', 'Computer Science', 'Environmental Science',
+  'Political Science', 'Accountancy', 'Business Studies',
+  'Psychology', 'Sociology', 'Physical Education',
+  'Statistics', 'Engineering', 'Philosophy', 'Law',
+  'Medical Science', 'Commerce',
+];
+
 export default function Home() {
   const [started, setStarted] = useState(false);
   const [mode, setMode] = useState<'pattern' | 'custom' | null>(null);
@@ -78,6 +93,11 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
   const [showCompleteSolutions, setShowCompleteSolutions] = useState(false);
   const [allQuestions, setAllQuestions] = useState<Array<{ number: number; question: string; solution: string }>>([]);
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [feedbackForm, setFeedbackForm] = useState({ name: '', studentClass: '', subject: '', suggestions: '' });
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const patternFileInputRef = useRef<HTMLInputElement>(null);
   const quoteIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -440,6 +460,36 @@ export default function Home() {
     }
   };
 
+  const handleFeedbackSubmit = async () => {
+    if (!feedbackForm.name || !feedbackForm.studentClass || !feedbackForm.subject) {
+      setFeedbackError('Please fill in name, class, and subject.');
+      return;
+    }
+    setFeedbackLoading(true);
+    setFeedbackError('');
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(feedbackForm),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to submit');
+      }
+      setFeedbackSuccess(true);
+      setFeedbackForm({ name: '', studentClass: '', subject: '', suggestions: '' });
+      setTimeout(() => {
+        setShowFeedbackForm(false);
+        setFeedbackSuccess(false);
+      }, 2000);
+    } catch (err: any) {
+      setFeedbackError(err.message || 'Something went wrong');
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
   const handleResetAndGenerateAnother = () => {
     setLatexContent('');
     setGenerationComplete(false);
@@ -586,12 +636,20 @@ export default function Home() {
               <h2 className="text-3xl md:text-5xl font-bold text-gray-800">Welcome</h2>
               <p className="text-base md:text-lg text-gray-600">Create Question Paper from your Textbook Instantly</p>
             </div>
-            <button
-              onClick={() => setStarted(true)}
-              className="bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold py-4 px-8 rounded-xl hover:shadow-lg transition-all transform hover:scale-105 text-lg md:text-xl w-full md:w-auto inline-block"
-            >
-              Get Started →
-            </button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={() => setStarted(true)}
+                className="bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold py-4 px-8 rounded-xl hover:shadow-lg transition-all transform hover:scale-105 text-lg md:text-xl"
+              >
+                Get Started →
+              </button>
+              <button
+                onClick={() => { setShowFeedbackForm(true); setFeedbackSuccess(false); setFeedbackError(''); }}
+                className="bg-gradient-to-r from-purple-600 to-indigo-500 text-white font-bold py-4 px-8 rounded-xl hover:shadow-lg transition-all transform hover:scale-105 text-lg md:text-xl"
+              >
+                💬 Share Feedback
+              </button>
+            </div>
           </div>
         ) : !mode ? (
           /* Mode Selection Screen */
@@ -951,6 +1009,111 @@ export default function Home() {
           </>
         )}
       </main>
+
+      {/* Feedback Popup */}
+      {showFeedbackForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowFeedbackForm(false)}>
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-fadeIn" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">💬 Share Your Feedback</h2>
+              <button
+                onClick={() => setShowFeedbackForm(false)}
+                className="text-white hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {feedbackSuccess ? (
+                <div className="text-center py-8 space-y-3">
+                  <div className="text-5xl">🎉</div>
+                  <p className="text-xl font-bold text-green-600">Thank you!</p>
+                  <p className="text-gray-600">Your feedback has been submitted.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Name */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Name <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      placeholder="Enter your name"
+                      value={feedbackForm.name}
+                      onChange={(e) => setFeedbackForm({ ...feedbackForm, name: e.target.value })}
+                      className="input-field"
+                    />
+                  </div>
+
+                  {/* Class */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Class <span className="text-red-500">*</span></label>
+                    <select
+                      value={feedbackForm.studentClass}
+                      onChange={(e) => setFeedbackForm({ ...feedbackForm, studentClass: e.target.value })}
+                      className="input-field appearance-none cursor-pointer"
+                    >
+                      <option value="">Select your class</option>
+                      {FEEDBACK_CLASSES.map(cls => (
+                        <option key={cls} value={cls}>{cls}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Subject */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Subject <span className="text-red-500">*</span></label>
+                    <select
+                      value={feedbackForm.subject}
+                      onChange={(e) => setFeedbackForm({ ...feedbackForm, subject: e.target.value })}
+                      className="input-field appearance-none cursor-pointer"
+                    >
+                      <option value="">Select your subject</option>
+                      {FEEDBACK_SUBJECTS.map(sub => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Suggestions */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Suggestions</label>
+                    <textarea
+                      placeholder="Any feedback or suggestions for us..."
+                      rows={3}
+                      value={feedbackForm.suggestions}
+                      onChange={(e) => setFeedbackForm({ ...feedbackForm, suggestions: e.target.value })}
+                      className="input-field resize-none"
+                    />
+                  </div>
+
+                  {/* Error */}
+                  {feedbackError && (
+                    <p className="text-red-600 text-sm font-medium">⚠️ {feedbackError}</p>
+                  )}
+
+                  {/* Submit */}
+                  <button
+                    onClick={handleFeedbackSubmit}
+                    disabled={feedbackLoading}
+                    className="w-full btn-primary py-3 text-base font-bold flex items-center justify-center gap-2"
+                  >
+                    {feedbackLoading ? (
+                      <>
+                        <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Feedback'
+                    )}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-blue-100 bg-white/50 mt-12 py-6 text-center text-sm text-gray-600">
