@@ -98,6 +98,7 @@ export default function Home() {
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackSuccess, setFeedbackSuccess] = useState(false);
   const [feedbackError, setFeedbackError] = useState('');
+  const [tokenUsage, setTokenUsage] = useState<{ extraction: { promptTokens: number; outputTokens: number; totalTokens: number }; pattern: { promptTokens: number; outputTokens: number; totalTokens: number }; generation: { promptTokens: number; outputTokens: number; totalTokens: number }; total: { promptTokens: number; outputTokens: number; totalTokens: number } } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const patternFileInputRef = useRef<HTMLInputElement>(null);
   const quoteIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -421,6 +422,9 @@ export default function Home() {
 
       setLoadingProgress(100);
       setLatexContent(data.latex);
+      if (data.tokenUsage) {
+        setTokenUsage(data.tokenUsage);
+      }
       setGenerationComplete(true);
     } catch (err: any) {
       setError(err.message || 'An error occurred during upload');
@@ -499,6 +503,7 @@ export default function Home() {
     setStarted(false);
     setError('');
     setLoadingProgress(0);
+    setTokenUsage(null);
   };
 
   const handleDownloadPDF = async (includeSolutions: boolean = true) => {
@@ -830,6 +835,46 @@ export default function Home() {
                       <p className="text-lg text-gray-700">Your question paper has been generated successfully!</p>
                       <p className="text-purple-600 font-semibold italic text-lg">{EXAM_QUOTES[Math.floor(Math.random() * EXAM_QUOTES.length)]}</p>
                     </div>
+
+                    {/* Token Usage Stats */}
+                    {tokenUsage && (
+                      <div className="bg-white/60 rounded-xl p-4 border border-green-200 max-w-xl mx-auto">
+                        <h3 className="text-sm font-bold text-gray-700 mb-3 text-center">📊 AI Token Usage</h3>
+                        <div className="grid grid-cols-3 gap-3 text-center text-xs">
+                          <div className="bg-blue-50 rounded-lg p-2 border border-blue-200">
+                            <p className="font-bold text-blue-700 text-lg">{tokenUsage.total.promptTokens.toLocaleString()}</p>
+                            <p className="text-gray-600">Input Tokens</p>
+                          </div>
+                          <div className="bg-purple-50 rounded-lg p-2 border border-purple-200">
+                            <p className="font-bold text-purple-700 text-lg">{tokenUsage.total.outputTokens.toLocaleString()}</p>
+                            <p className="text-gray-600">Output Tokens</p>
+                          </div>
+                          <div className="bg-green-50 rounded-lg p-2 border border-green-200">
+                            <p className="font-bold text-green-700 text-lg">{tokenUsage.total.totalTokens.toLocaleString()}</p>
+                            <p className="text-gray-600">Total Tokens</p>
+                          </div>
+                        </div>
+                        <details className="mt-3">
+                          <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 text-center">View breakdown</summary>
+                          <div className="mt-2 space-y-1 text-xs text-gray-600">
+                            <div className="flex justify-between bg-gray-50 px-3 py-1 rounded">
+                              <span>📄 PDF Extraction</span>
+                              <span className="font-mono">{tokenUsage.extraction.totalTokens.toLocaleString()} tokens</span>
+                            </div>
+                            {tokenUsage.pattern.totalTokens > 0 && (
+                              <div className="flex justify-between bg-gray-50 px-3 py-1 rounded">
+                                <span>📋 Pattern Analysis</span>
+                                <span className="font-mono">{tokenUsage.pattern.totalTokens.toLocaleString()} tokens</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between bg-gray-50 px-3 py-1 rounded">
+                              <span>✨ Question Generation</span>
+                              <span className="font-mono">{tokenUsage.generation.totalTokens.toLocaleString()} tokens</span>
+                            </div>
+                          </div>
+                        </details>
+                      </div>
+                    )}
                   </div>
                 )}
 

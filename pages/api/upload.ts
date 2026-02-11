@@ -116,7 +116,18 @@ async function withRetry<T>(
 }
 
 // Specialized pattern analysis: extracts STRUCTURE (not raw text) from a question paper PDF
-async function extractPatternStructure(filePath: string): Promise<string> {
+interface TokenUsage {
+  promptTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
+interface ExtractionResult {
+  text: string;
+  tokens: TokenUsage;
+}
+
+async function extractPatternStructure(filePath: string): Promise<ExtractionResult> {
   try {
     if (!fs.existsSync(filePath)) {
       throw new Error(`Pattern file not found at: ${filePath}`);
@@ -218,8 +229,9 @@ IMPORTANT: Be extremely precise about the TYPE of each question and sub-part. Th
       throw new Error('Could not analyze the pattern PDF structure. The file may be image-only — try a text-based PDF.');
     }
 
-    console.log(`Pattern structure analysis complete. Length: ${text.length} chars`);
-    return text;
+    const usage = response.usageMetadata;
+    console.log(`Pattern structure analysis complete. Length: ${text.length} chars. Tokens: ${usage?.totalTokenCount || 'N/A'}`);
+    return { text, tokens: { promptTokens: usage?.promptTokenCount || 0, outputTokens: usage?.candidatesTokenCount || 0, totalTokens: usage?.totalTokenCount || 0 } };
   } catch (error: any) {
     console.error(`Error analyzing pattern PDF (${filePath}):`, error);
 
@@ -239,7 +251,7 @@ IMPORTANT: Be extremely precise about the TYPE of each question and sub-part. Th
   }
 }
 
-async function extractTextFromPDF(filePath: string): Promise<string> {
+async function extractTextFromPDF(filePath: string): Promise<ExtractionResult> {
   try {
     // 1. Validate file existence and size
     if (!fs.existsSync(filePath)) {
@@ -294,8 +306,9 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
       throw new Error('No text could be extracted from the PDF');
     }
     
-    console.log(`Successfully extracted ${text.length} characters from PDF using Gemini`);
-    return text;
+    const usage = response.usageMetadata;
+    console.log(`Successfully extracted ${text.length} characters from PDF using Gemini. Tokens: ${usage?.totalTokenCount || 'N/A'}`);
+    return { text, tokens: { promptTokens: usage?.promptTokenCount || 0, outputTokens: usage?.candidatesTokenCount || 0, totalTokens: usage?.totalTokenCount || 0 } };
   } catch (error: any) {
     console.error(`Error extracting text from PDF (${filePath}):`, error);
     
@@ -322,7 +335,7 @@ async function generateQuestionsWithGemini(
   pdfText: string,
   metadata: PDFMetadata,
   patternText?: string
-): Promise<string> {
+): Promise<ExtractionResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not configured');
@@ -1010,13 +1023,14 @@ CRITICAL FORMATTING REQUIREMENTS:
   const response = await result.response;
   const responseText = response.text();
   
-  console.log('Received response from Gemini. Length:', responseText.length);
+  const usage = response.usageMetadata;
+  console.log(`Received response from Gemini. Length: ${responseText.length}. Tokens: ${usage?.totalTokenCount || 'N/A'}`);
   
   if (!responseText || responseText.trim().length === 0) {
     throw new Error('Gemini returned empty response');
   }
   
-  return responseText;
+  return { text: responseText, tokens: { promptTokens: usage?.promptTokenCount || 0, outputTokens: usage?.candidatesTokenCount || 0, totalTokens: usage?.totalTokenCount || 0 } };
 }
 
 export default async function handler(
@@ -1113,9 +1127,16 @@ export default async function handler(
 
         let pdfText: string;
         let patternText: string | undefined;
+        const tokenStats = { extraction: { promptTokens: 0, outputTokens: 0, totalTokens: 0 }, pattern: { promptTokens: 0, outputTokens: 0, totalTokens: 0 }, generation: { promptTokens: 0, outputTokens: 0, totalTokens: 0 }, total: { promptTokens: 0, outputTokens: 0, totalTokens: 0 } };
 
         try {
-          [pdfText, patternText] = await Promise.all([contentPromise, patternPromise]);
+          const [contentResult, patternResult] = await Promise.all([contentPromise, patternPromise]);
+          pdfText = contentResult.text;
+          tokenStats.extraction = contentResult.tokens;
+          if (patternResult) {
+            patternText = patternResult.text;
+            tokenStats.pattern = patternResult.tokens;
+          }
         } catch (extractionError: any) {
           // Clean up uploaded files on extraction failure
           if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -1165,7 +1186,7 @@ export default async function handler(
             await delay(2000);
           }
 
-          latexContent = await withRetry(
+          const genResult = await withRetry(
             () => generateQuestionsWithGemini(
               contentForPrompt.text,
               metadata,
@@ -1173,6 +1194,8 @@ export default async function handler(
             ),
             { maxRetries: 1, baseDelay: 5000, label: 'question-generation' }
           );
+          latexContent = genResult.text;
+          tokenStats.generation = genResult.tokens;
         } catch (geminiError: any) {
           console.error('Gemini API error:', geminiError);
           const msg = geminiError.message || 'Unknown error';
@@ -1227,9 +1250,18 @@ export default async function handler(
           fs.unlinkSync(patternFilePath);
         }
 
+        // Calculate totals
+        tokenStats.total = {
+          promptTokens: tokenStats.extraction.promptTokens + tokenStats.pattern.promptTokens + tokenStats.generation.promptTokens,
+          outputTokens: tokenStats.extraction.outputTokens + tokenStats.pattern.outputTokens + tokenStats.generation.outputTokens,
+          totalTokens: tokenStats.extraction.totalTokens + tokenStats.pattern.totalTokens + tokenStats.generation.totalTokens,
+        };
+        console.log('Total token usage:', JSON.stringify(tokenStats.total));
+
         return res.status(200).json({
           success: true,
           latex: latexContent,
+          tokenUsage: tokenStats,
         });
       } catch (error: any) {
         console.error('Processing error:', error);
