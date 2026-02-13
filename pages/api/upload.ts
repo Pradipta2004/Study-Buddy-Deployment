@@ -897,18 +897,19 @@ GENERATION RULES:
 4. Replicate the pattern's formatting: same numbering style, same marks display format, same header/instruction layout
 5. Generate NEW questions from the textbook content — do NOT copy the sample questions from the pattern
 6. Match the difficulty level: ${difficulty}
-7. For EVERY question, include a solution wrapped in markers:
+7. Distribute questions as evenly as possible across all chapters/topics in the textbook content (unless the pattern constraints force a different split)
+8. For EVERY question, include a solution wrapped in markers:
    % START SOLUTION
    [Step-by-step solution]
    % END SOLUTION
-8. Use proper LaTeX packages: amsmath, amssymb, geometry, enumitem, fancyhdr
-9. Use $...$ for inline math and \\[...\\] or $$...$$ for display math
-10. For MCQs: use the exact option format from the pattern (e.g., (a)(b)(c)(d))
-11. For fill-in-blanks: use \\underline{\\hspace{3cm}}
-12. For True/False: state a clear declarative statement and ask if it's True or False
-13. For Column Matching: use a LaTeX tabular with Column A and Column B. Shuffle Column B so answers don't align directly. Solution should list correct pairs.
-14. For Assertion-Reason: follow the exact assertion-reason format from the pattern
-15. For Numerical: include actual calculations with numbers and units
+9. Use proper LaTeX packages: amsmath, amssymb, geometry, enumitem, fancyhdr
+10. Use $...$ for inline math and \\[...\\] or $$...$$ for display math
+11. For MCQs: use the exact option format from the pattern (e.g., (a)(b)(c)(d))
+12. For fill-in-blanks: use \\underline{\\hspace{3cm}}
+13. For True/False: state a clear declarative statement and ask if it's True or False
+14. For Column Matching: use a LaTeX tabular with Column A and Column B. Shuffle Column B so answers don't align directly. Solution should list correct pairs.
+15. For Assertion-Reason: follow the exact assertion-reason format from the pattern
+16. For Numerical: include actual calculations with numbers and units
 
 IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no explanations, no code fences.`
     : `You are an expert ${subject} educator and LaTeX document formatter.
@@ -921,6 +922,7 @@ Please generate high-quality ${subject} questions based on this content.${questi
 Question Requirements:
 - Question types: ${questionTypeDesc}
 - Difficulty level: ${difficulty}
+- Distribute questions as evenly as possible across all chapters/topics in the content
 - Each question should be clear and well-formatted
 - Provide detailed step-by-step solutions
 - Use proper LaTeX notation for all mathematical expressions${customInstructionsSection}
