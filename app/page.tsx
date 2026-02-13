@@ -104,6 +104,37 @@ export default function Home() {
   const quoteIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const modalPreviewRef = useRef<HTMLDivElement>(null);
+  const [wasTabHidden, setWasTabHidden] = useState(false);
+
+  // Track tab visibility during generation
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (loading && document.hidden) {
+        setWasTabHidden(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loading]);
+
+  // Show alert with sound when generation completes while tab was hidden
+  useEffect(() => {
+    if (generationComplete && wasTabHidden && !loading) {
+      // Play notification sound
+      const audio = new Audio('data:audio/wav;base64,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');
+      audio.volume = 0.3;
+      audio.play().catch(err => console.log('Audio play failed:', err));
+
+      // Show alert
+      setTimeout(() => {
+        alert('✅ Question generation complete! Your questions are ready.');
+        setWasTabHidden(false);
+      }, 100);
+    }
+  }, [generationComplete, wasTabHidden, loading]);
 
   // Convert LaTeX content to HTML-friendly format
   const formatContent = (latex: string) => {

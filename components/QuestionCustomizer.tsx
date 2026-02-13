@@ -59,6 +59,8 @@ const SUBJECTS = [
   { value: 'law', label: '⚖️ Law', levels: ['college'] },
   { value: 'medical-science', label: '🏥 Medical Science', levels: ['college'] },
   { value: 'commerce', label: '💳 Commerce', levels: ['college'] },
+  
+  { value: 'others', label: '📝 Others', levels: ['secondary', 'higher-secondary', 'college'] },
 ];
 
 // Hard-coded auto-fill configurations organized by class and subject
@@ -90,6 +92,7 @@ const AUTO_FILL_CONFIGS: {
     'english': { questionsByType: { mcq: 5, fillInBlanks: 5, trueFalse: 2, columnMatching: 2, general: 6 }, questionsByMarks: { '2': 4, '3': 3, '4': 2, '5': 1, '6': 0, '10': 0 } },
     'history': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 3, '4': 2, '5': 2, '6': 0, '10': 0 } },
     'geography': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 3, '4': 2, '5': 2, '6': 0, '10': 0 } },
+    'others': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 3, '4': 2, '5': 2, '6': 0, '10': 0 } },
   },
   '5': {
     'mathematics': { questionsByType: { mcq: 8, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 3 }, questionsByMarks: { '2': 4, '3': 3, '4': 2, '5': 2, '6': 1, '10': 0 } },
@@ -98,6 +101,7 @@ const AUTO_FILL_CONFIGS: {
     'english': { questionsByType: { mcq: 5, fillInBlanks: 5, trueFalse: 2, columnMatching: 2, general: 6 }, questionsByMarks: { '2': 4, '3': 3, '4': 2, '5': 2, '6': 0, '10': 0 } },
     'history': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 3, '4': 2, '5': 2, '6': 1, '10': 0 } },
     'geography': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 3, '4': 2, '5': 2, '6': 1, '10': 0 } },
+    'others': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 3, '4': 2, '5': 2, '6': 1, '10': 0 } },
   },
   '6': {
     'mathematics': { questionsByType: { mcq: 8, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 3 }, questionsByMarks: { '2': 4, '3': 3, '4': 3, '5': 2, '6': 1, '10': 0 } },
@@ -106,6 +110,7 @@ const AUTO_FILL_CONFIGS: {
     'english': { questionsByType: { mcq: 5, fillInBlanks: 5, trueFalse: 2, columnMatching: 2, general: 6 }, questionsByMarks: { '2': 4, '3': 3, '4': 3, '5': 2, '6': 1, '10': 0 } },
     'history': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 3, '4': 3, '5': 2, '6': 1, '10': 0 } },
     'geography': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 3, '4': 3, '5': 2, '6': 1, '10': 0 } },
+    'others': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 3, '4': 3, '5': 2, '6': 1, '10': 0 } },
   },
   '7': {
     'mathematics': { questionsByType: { mcq: 8, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 3 }, questionsByMarks: { '2': 4, '3': 4, '4': 3, '5': 2, '6': 1, '10': 0 } },
@@ -114,6 +119,7 @@ const AUTO_FILL_CONFIGS: {
     'english': { questionsByType: { mcq: 5, fillInBlanks: 5, trueFalse: 2, columnMatching: 2, general: 6 }, questionsByMarks: { '2': 4, '3': 4, '4': 3, '5': 2, '6': 1, '10': 0 } },
     'history': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 4, '4': 3, '5': 2, '6': 1, '10': 0 } },
     'geography': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 4, '4': 3, '5': 2, '6': 1, '10': 0 } },
+    'others': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 4, '4': 3, '5': 2, '6': 1, '10': 0 } },
   },
   '8': {
     'mathematics': { questionsByType: { mcq: 8, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 3 }, questionsByMarks: { '2': 4, '3': 4, '4': 3, '5': 2, '6': 1, '10': 1 } },
@@ -122,6 +128,7 @@ const AUTO_FILL_CONFIGS: {
     'english': { questionsByType: { mcq: 5, fillInBlanks: 5, trueFalse: 2, columnMatching: 2, general: 6 }, questionsByMarks: { '2': 4, '3': 4, '4': 3, '5': 2, '6': 1, '10': 0 } },
     'history': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 4, '4': 3, '5': 2, '6': 1, '10': 1 } },
     'geography': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 4, '4': 3, '5': 2, '6': 1, '10': 1 } },
+    'others': { questionsByType: { mcq: 6, fillInBlanks: 4, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 3, '3': 4, '4': 3, '5': 2, '6': 1, '10': 1 } },
   },
   '9': {
     'mathematics': { questionsByType: { mcq: 10, fillInBlanks: 5, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 5, '3': 4, '4': 3, '5': 3, '6': 2, '10': 1 } },
@@ -131,6 +138,7 @@ const AUTO_FILL_CONFIGS: {
     'history': { questionsByType: { mcq: 7, fillInBlanks: 5, trueFalse: 3, columnMatching: 2, general: 6 }, questionsByMarks: { '2': 4, '3': 4, '4': 3, '5': 3, '6': 2, '10': 1 } },
     'geography': { questionsByType: { mcq: 7, fillInBlanks: 5, trueFalse: 3, columnMatching: 2, general: 6 }, questionsByMarks: { '2': 4, '3': 4, '4': 3, '5': 3, '6': 2, '10': 1 } },
     'computer-science': { questionsByType: { mcq: 10, fillInBlanks: 5, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 5, '3': 4, '4': 3, '5': 3, '6': 2, '10': 1 } },
+    'others': { questionsByType: { mcq: 8, fillInBlanks: 5, trueFalse: 3, columnMatching: 2, general: 6 }, questionsByMarks: { '2': 4, '3': 4, '4': 3, '5': 3, '6': 2, '10': 1 } },
   },
   '10': {
     'mathematics': { questionsByType: { mcq: 10, fillInBlanks: 5, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 5, '3': 5, '4': 4, '5': 3, '6': 2, '10': 2 } },
@@ -140,6 +148,7 @@ const AUTO_FILL_CONFIGS: {
     'history': { questionsByType: { mcq: 8, fillInBlanks: 5, trueFalse: 3, columnMatching: 2, general: 7 }, questionsByMarks: { '2': 5, '3': 5, '4': 4, '5': 3, '6': 2, '10': 2 } },
     'geography': { questionsByType: { mcq: 8, fillInBlanks: 5, trueFalse: 3, columnMatching: 2, general: 7 }, questionsByMarks: { '2': 5, '3': 5, '4': 4, '5': 3, '6': 2, '10': 2 } },
     'computer-science': { questionsByType: { mcq: 10, fillInBlanks: 5, trueFalse: 3, columnMatching: 2, general: 5 }, questionsByMarks: { '2': 5, '3': 5, '4': 4, '5': 3, '6': 2, '10': 2 } },
+    'others': { questionsByType: { mcq: 8, fillInBlanks: 5, trueFalse: 3, columnMatching: 2, general: 7 }, questionsByMarks: { '2': 5, '3': 5, '4': 4, '5': 3, '6': 2, '10': 2 } },
   },
   '11': {
     'mathematics': { questionsByType: { mcq: 12, fillInBlanks: 6, trueFalse: 4, columnMatching: 3, general: 5 }, questionsByMarks: { '2': 6, '3': 5, '4': 4, '5': 4, '6': 3, '10': 2 } },
@@ -152,6 +161,7 @@ const AUTO_FILL_CONFIGS: {
     'computer-science': { questionsByType: { mcq: 12, fillInBlanks: 6, trueFalse: 4, columnMatching: 3, general: 5 }, questionsByMarks: { '2': 6, '3': 5, '4': 4, '5': 4, '6': 3, '10': 2 } },
     'accountancy': { questionsByType: { mcq: 10, fillInBlanks: 6, trueFalse: 4, columnMatching: 3, general: 7 }, questionsByMarks: { '2': 6, '3': 5, '4': 4, '5': 4, '6': 3, '10': 2 } },
     'business-studies': { questionsByType: { mcq: 10, fillInBlanks: 6, trueFalse: 4, columnMatching: 3, general: 7 }, questionsByMarks: { '2': 6, '3': 5, '4': 4, '5': 4, '6': 3, '10': 2 } },
+    'others': { questionsByType: { mcq: 10, fillInBlanks: 6, trueFalse: 4, columnMatching: 3, general: 7 }, questionsByMarks: { '2': 6, '3': 5, '4': 4, '5': 4, '6': 3, '10': 2 } },
   },
   '12': {
     'mathematics': { questionsByType: { mcq: 12, fillInBlanks: 6, trueFalse: 4, columnMatching: 3, general: 5 }, questionsByMarks: { '2': 6, '3': 5, '4': 5, '5': 4, '6': 3, '10': 3 } },
@@ -164,6 +174,7 @@ const AUTO_FILL_CONFIGS: {
     'computer-science': { questionsByType: { mcq: 12, fillInBlanks: 6, trueFalse: 4, columnMatching: 3, general: 5 }, questionsByMarks: { '2': 6, '3': 5, '4': 5, '5': 4, '6': 3, '10': 3 } },
     'accountancy': { questionsByType: { mcq: 10, fillInBlanks: 6, trueFalse: 4, columnMatching: 3, general: 7 }, questionsByMarks: { '2': 6, '3': 5, '4': 5, '5': 4, '6': 3, '10': 3 } },
     'business-studies': { questionsByType: { mcq: 10, fillInBlanks: 6, trueFalse: 4, columnMatching: 3, general: 7 }, questionsByMarks: { '2': 6, '3': 5, '4': 5, '5': 4, '6': 3, '10': 3 } },
+    'others': { questionsByType: { mcq: 10, fillInBlanks: 6, trueFalse: 4, columnMatching: 3, general: 7 }, questionsByMarks: { '2': 6, '3': 5, '4': 5, '5': 4, '6': 3, '10': 3 } },
   },
   'college': {
     'mathematics': { questionsByType: { mcq: 15, fillInBlanks: 7, trueFalse: 5, columnMatching: 3, general: 5 }, questionsByMarks: { '2': 7, '3': 6, '4': 5, '5': 5, '6': 4, '10': 3 } },
@@ -176,6 +187,7 @@ const AUTO_FILL_CONFIGS: {
     'commerce': { questionsByType: { mcq: 12, fillInBlanks: 7, trueFalse: 5, columnMatching: 3, general: 8 }, questionsByMarks: { '2': 7, '3': 6, '4': 5, '5': 5, '6': 4, '10': 3 } },
     'law': { questionsByType: { mcq: 10, fillInBlanks: 6, trueFalse: 4, columnMatching: 3, general: 10 }, questionsByMarks: { '2': 7, '3': 6, '4': 5, '5': 5, '6': 4, '10': 3 } },
     'medical-science': { questionsByType: { mcq: 15, fillInBlanks: 7, trueFalse: 5, columnMatching: 3, general: 5 }, questionsByMarks: { '2': 7, '3': 6, '4': 5, '5': 5, '6': 4, '10': 4 } },
+    'others': { questionsByType: { mcq: 12, fillInBlanks: 7, trueFalse: 5, columnMatching: 3, general: 8 }, questionsByMarks: { '2': 7, '3': 6, '4': 5, '5': 5, '6': 4, '10': 3 } },
   },
 };
 
