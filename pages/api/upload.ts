@@ -392,58 +392,261 @@ async function generateQuestionsDirectFromPDF(
     ? `\n\nCUSTOM INSTRUCTIONS (HIGHEST PRIORITY — follow these carefully, they override other settings):\n${metadata.customInstructions}`
     : '';
 
+  // Rich subject-specific guidelines that enforce quality, innovation, and proper question style
   const subjectSpecificGuidelines: { [key: string]: string } = {
-    mathematics: '- 40% Numerical/Computational, 30% Conceptual, 20% Application, 10% Theorem-based\n- Include actual calculations with step-by-step solutions\n- Equal coverage across all chapters/topics',
-    physics: '- 50% Numerical with SI units, 25% Derivations, 15% Theory, 10% Diagram-based\n- Include realistic values and proper units',
-    chemistry: '- 40% Numerical (stoichiometry, molarity), 30% Reactions, 20% Properties, 10% Experimental\n- Use accurate molar masses and formulas',
-    biology: '- 50% Descriptive, 25% Diagram-based, 15% Application, 10% Numerical\n- Use proper scientific terminology',
-    history: '- 40% Analytical, 30% Descriptive, 20% Chronological, 10% Comparative\n- Include specific dates, names, places',
-    english: '- 30% Comprehension, 25% Grammar, 25% Literature, 20% Composition\n- Include text excerpts and grammar examples',
+    mathematics: `MATHEMATICS — QUESTION QUALITY RULES:
+CRITICAL: Do NOT generate basic definition questions like "Define polynomial" or "What is a fraction?".
+Instead, generate PROPER NUMERICAL & COMPUTATIONAL questions that require actual calculation.
+
+Question Distribution:
+- 50% NUMERICAL/COMPUTATIONAL: Actual math problems requiring step-by-step calculation
+  Examples: "Solve: $3x^2 - 7x + 2 = 0$", "Find the area of triangle with vertices A(2,3), B(5,7), C(-1,4)"
+  "Evaluate: $\\int_0^{\\pi} \\sin^2 x\\, dx$", "If $\\log_2(x-1) + \\log_2(x+3) = 5$, find $x$"
+- 20% APPLICATION/WORD PROBLEMS: Real-world scenarios requiring mathematical modeling
+  Examples: "A train travels 360 km. If speed increased by 20 km/h, time reduces by 1 hour. Find original speed."
+- 15% PROOF/DERIVATION: Prove theorems, derive formulas, verify identities
+  Examples: "Prove that $\\sqrt{3}$ is irrational", "Derive the quadratic formula"
+- 10% CONCEPTUAL (but NOT definition): Questions testing deep understanding
+  Examples: "Explain geometrically why $\\sin^2\\theta + \\cos^2\\theta = 1$"
+- 5% MCQ: With numerical options, not "which of the following is the definition of..."
+
+BANNED question types for Math: "Define X", "What is X?", "State the formula for X", "Write the definition of X"
+REQUIRED: Every math question must involve NUMBERS, EQUATIONS, or LOGICAL REASONING.`,
+
+    physics: `PHYSICS — QUESTION QUALITY RULES:
+CRITICAL: Prioritize NUMERICAL PROBLEMS with real values and SI units.
+
+Question Distribution:
+- 50% NUMERICAL PROBLEMS: With given data, formula application, and calculated answers
+  Examples: "A ball is thrown vertically upward with velocity 20 m/s. Find maximum height and time of flight. (g=10 m/s²)"
+  "A 5 kg block slides down a 30° incline with μ=0.2. Find acceleration and velocity after 3 seconds."
+- 20% DERIVATION: Derive expressions, prove relationships
+  Examples: "Derive the expression for time period of a simple pendulum", "Derive lens maker's formula"
+- 15% APPLICATION/CONCEPTUAL: Why/How questions requiring physical reasoning
+  Examples: "Why does a spinning top not fall?", "Explain how a transformer works with energy conservation"
+- 10% DIAGRAM-BASED: Ray diagrams, circuit diagrams, force diagrams
+- 5% MCQ: With calculated numerical options
+
+BANNED: "Define force", "What is momentum?", "State Newton's first law" as standalone questions.
+REQUIRED: Numerical problems must include realistic values, proper units, and step-by-step solutions.`,
+
+    chemistry: `CHEMISTRY — QUESTION QUALITY RULES:
+CRITICAL: Balance between numerical chemistry and reaction-based questions.
+
+Question Distribution:
+- 35% NUMERICAL: Stoichiometry, molarity, pH, electrochemistry calculations
+  Examples: "Calculate the mass of NaOH needed to prepare 500 mL of 0.2M solution"
+  "What volume of 0.1M HCl is needed to neutralize 25 mL of 0.15M NaOH?"
+- 25% REACTION & MECHANISM: Write balanced equations, predict products, explain mechanisms
+  Examples: "Write the balanced equation for the reaction of ethanol with acidified potassium dichromate"
+- 20% CONCEPTUAL/ANALYTICAL: Explain trends, compare properties, predict behavior
+  Examples: "Explain why ionization energy increases across a period but decreases down a group"
+- 10% STRUCTURE/DIAGRAM: Draw structures, orbital diagrams, crystal structures
+- 10% MCQ/SHORT: Quick calculations or identification
+
+BANNED: "Define mole", "What is an atom?" as standalone questions.
+REQUIRED: Use accurate molar masses, Avogadro's number, and proper chemical notation.`,
+
+    biology: `BIOLOGY — QUESTION QUALITY RULES:
+CRITICAL: Go beyond rote memorization. Test application, analysis, and critical thinking.
+
+Question Distribution:
+- 30% ANALYTICAL: Cause-effect, compare-contrast, explain WHY
+  Examples: "Compare mitosis and meiosis in terms of genetic variation and biological significance"
+  "Why are antibiotics ineffective against viral infections? Explain with reference to cell structure."
+- 25% APPLICATION/CASE-STUDY: Real-world biological scenarios
+  Examples: "A patient shows symptoms of fatigue, weight gain, and cold intolerance. Which gland is likely affected and why?"
+- 20% DIAGRAM-BASED: Label, draw, interpret diagrams
+  Examples: "Draw the structure of a nephron and trace the path of urine formation"
+- 15% DESCRIPTIVE (but specific): Explain processes with detail
+  Examples: "Describe the light-dependent reactions of photosynthesis, including the role of NADP+ and ATP synthase"
+- 10% NUMERICAL: Genetics ratios, population ecology calculations
+  Examples: "In a cross between Tt × Tt pea plants, predict the phenotypic ratio of tall to short plants in F2 generation"
+
+BANNED: "Define photosynthesis", "What is DNA?" as standalone questions.`,
+
+    history: `HISTORY — QUESTION QUALITY RULES:
+CRITICAL: Generate ANALYTICAL and INNOVATIVE questions. NOT basic recall of dates and names.
+
+Question Distribution:
+- 35% ANALYTICAL/CAUSE-EFFECT: Why did X happen? What were the consequences?
+  Examples: "Analyze the economic and political factors that led to the French Revolution"
+  "How did the Treaty of Versailles contribute to the rise of Nazism in Germany?"
+- 25% COMPARATIVE: Compare movements, leaders, policies, eras
+  Examples: "Compare the independence movements of India and South Africa in terms of methods and leadership"
+  "Contrast the economic policies of capitalism and socialism as practiced in the 20th century"
+- 20% SIGNIFICANCE/IMPACT: Evaluate the impact or significance of events
+  Examples: "Assess the significance of the printing press in the spread of the Renaissance"
+  "How did the Industrial Revolution transform social class structures in Europe?"
+- 10% SOURCE-BASED/PASSAGE: Analyze a historical passage, map, or document
+  Examples: "Read the following excerpt from [historical speech]. What was the speaker's main argument?"
+- 10% CHRONOLOGICAL/FACTUAL: Timeline, sequence of events (but combine with analysis)
+  Examples: "Arrange the following events in chronological order and explain how each led to the next"
+
+BANNED: "Who was X?", "In which year did X happen?", "Define nationalism" as standalone questions.
+REQUIRED: Every question should require THINKING, not just MEMORIZATION.`,
+
+    english: `ENGLISH — QUESTION QUALITY RULES:
+Question Distribution:
+- 30% COMPREHENSION: Provide actual passages and ask inferential questions (not just "what happened")
+  Examples: "Read the passage and explain the author's use of irony in paragraph 3"
+- 25% LITERATURE ANALYSIS: Deep analysis of poems, prose, drama
+  Examples: "How does Shakespeare use the motif of light and darkness in Romeo and Juliet?"
+- 20% GRAMMAR IN CONTEXT: Transform sentences, identify errors in paragraphs, rewrite
+  Examples: "Rewrite the following passage changing the voice from active to passive"
+- 15% CREATIVE WRITING: Essays, letters, reports with specific prompts
+- 10% VOCABULARY IN CONTEXT: Word usage, synonyms/antonyms in sentences
+
+BANNED: "Define a noun", "What is a verb?" as standalone questions.`,
+
+    'physical-science': `PHYSICAL SCIENCE — QUESTION QUALITY RULES:
+Combine physics and chemistry approach:
+- 50% NUMERICAL: Calculation-based problems with real values and units
+- 20% EXPERIMENTAL: Describe experiments, predict outcomes, analyze data
+- 15% CONCEPTUAL/ANALYTICAL: Explain phenomena with scientific reasoning
+- 10% DIAGRAM-BASED: Draw, label, interpret scientific diagrams
+- 5% MCQ with calculated answers
+BANNED: Basic definitions as standalone questions. Every question should involve reasoning or calculation.`,
+
+    'life-science': `LIFE SCIENCE — QUESTION QUALITY RULES:
+- 30% ANALYTICAL: Compare processes, explain cause-effect relationships
+- 25% APPLICATION: Real-world scenarios, case studies, health applications
+- 20% DIAGRAM-BASED: Draw and label biological structures, explain functions
+- 15% PROCESS-BASED: Describe biological processes step-by-step with detail
+- 10% NUMERICAL: Genetics ratios, ecological calculations
+BANNED: "Define X" as standalone questions. Always require explanation or application.`,
+
+    geography: `GEOGRAPHY — QUESTION QUALITY RULES:
+- 35% MAP/DIAGRAM-BASED: Locate, identify, mark on maps, interpret climate data
+- 25% ANALYTICAL: Explain geographical phenomena, cause-effect of natural events
+  Examples: "Explain how ocean currents influence the climate of Western Europe"
+- 20% COMPARATIVE: Compare regions, climates, geological features
+- 10% DATA INTERPRETATION: Read and analyze climate graphs, population tables
+- 10% APPLICATION: How geography affects human life, resource management
+BANNED: "Define latitude" style questions.`,
+
+    economics: `ECONOMICS — QUESTION QUALITY RULES:
+- 40% NUMERICAL: Demand-supply calculations, GDP, inflation, elasticity, national income
+  Examples: "If price rises from ₹10 to ₹12 and demand falls from 100 to 80 units, calculate price elasticity of demand"
+- 25% ANALYTICAL: Explain economic concepts with real-world examples
+  Examples: "Analyze how demonetization affects the money supply in an economy"
+- 20% GRAPHICAL: Draw and interpret demand-supply curves, cost curves
+- 15% CASE STUDY: Real economic scenarios requiring analysis
+BANNED: "Define GDP", "What is demand?" as full questions. Definitions only as sub-parts of larger questions.`,
+
+    'computer-science': `COMPUTER SCIENCE — QUESTION QUALITY RULES:
+- 40% CODE/PROGRAM: Write code, trace output, debug, complete programs
+  Examples: "Write a function to check if a string is palindrome", "Trace the output of the given recursive function"
+- 25% ALGORITHM/LOGIC: Design algorithms, analyze complexity, flowcharts
+- 20% CONCEPTUAL (deep): Explain how things work internally (not definitions)
+  Examples: "Explain how a hash table handles collisions using chaining"
+- 15% MCQ/SHORT: Quick technical questions with reasoning
+BANNED: "Define variable", "What is an array?" as standalone questions.`,
+
+    'political-science': `POLITICAL SCIENCE — QUESTION QUALITY RULES:
+- 40% ANALYTICAL: Analyze concepts, policies, institutions with reasoning
+  Examples: "Analyze the role of judiciary in protecting fundamental rights with examples"
+- 25% COMPARATIVE: Compare political systems, ideologies, constitutions
+- 20% CASE-BASED: Real political scenarios requiring analysis
+- 15% DESCRIPTIVE (specific): Explain specific processes, not just definitions
+BANNED: "Define democracy" as a standalone question. Require analysis in every question.`,
+
+    accountancy: `ACCOUNTANCY — QUESTION QUALITY RULES:
+- 70% NUMERICAL: Journal entries, ledger posting, trial balance, final accounts, ratio analysis
+  Examples: "Prepare Trading and P&L Account from the following trial balance"
+- 15% PRACTICAL SCENARIOS: Real business transaction recording
+- 10% THEORETICAL (specific): Explain accounting principles with examples
+- 5% MCQ
+REQUIRED: Every numerical must have complete data and step-by-step solution.`,
+
+    'business-studies': `BUSINESS STUDIES — QUESTION QUALITY RULES:
+- 40% CASE STUDY: Real business scenarios requiring analysis
+  Examples: "Read the case and identify which management principles are being violated"
+- 30% ANALYTICAL: Analyze functions, processes, strategies
+- 20% COMPARATIVE: Compare management styles, marketing strategies
+- 10% DESCRIPTIVE (specific)
+BANNED: "Define management" as standalone questions.`,
+
+    psychology: `PSYCHOLOGY — QUESTION QUALITY RULES:
+- 40% CASE-BASED: Analyze behavioral scenarios using psychological concepts
+  Examples: "A child shows aggression after watching violent TV. Explain using Bandura's Social Learning Theory"
+- 25% ANALYTICAL: Compare theories, analyze experimental findings
+- 20% APPLICATION: Apply concepts to real-life situations
+- 15% EXPERIMENTAL: Design studies, interpret results, ethical considerations
+BANNED: "Define psychology" or "Who is Freud?" as standalone questions.`,
   };
 
-  const guidelines = subjectSpecificGuidelines[subject] || '- Equal topic coverage\n- Clear, specific questions\n- Test understanding, not just recall';
+  const guidelines = subjectSpecificGuidelines[subject] || `GENERAL SUBJECT — QUESTION QUALITY RULES:
+- Generate INNOVATIVE and THOUGHT-PROVOKING questions, not basic definitions
+- 35% ANALYTICAL: Why/How questions requiring reasoning and critical thinking
+- 25% APPLICATION: Real-world scenarios and case studies
+- 20% COMPARATIVE: Compare concepts, processes, or entities
+- 15% DESCRIPTIVE (specific): Explain processes with detail, not just define terms
+- 5% MCQ/SHORT: Quick questions but testing understanding, not recall
+BANNED: "Define X", "What is X?" as standalone questions. Every question must require THINKING.
+REQUIRED: Cover ALL chapters/topics from the PDF equally.`;
+
+  // Universal quality directive added to ALL prompts
+  const universalQualityDirective = `
+━━━━ UNIVERSAL QUESTION QUALITY RULES (APPLY TO ALL SUBJECTS) ━━━━
+1. NEVER generate basic definition questions like "Define X" or "What is X?" as standalone questions.
+   Definitions may appear as small sub-parts (1-2 marks) of larger questions, but never as the main question.
+2. Every question must require THINKING, ANALYSIS, CALCULATION, or APPLICATION — not just memorization.
+3. COVER ALL CHAPTERS/TOPICS/SECTIONS from the textbook PDF EQUALLY. Do not skip any chapter.
+   First, identify ALL chapters/units in the PDF, then ensure each chapter gets roughly equal number of questions.
+4. Include the CHAPTER NAME or TOPIC in the question or as a label: e.g., "[Chapter 3: Trigonometry]"
+5. Questions should be EXAM-STANDARD — the kind that appear in actual board exams, university exams, or competitive tests.
+6. For numerical/calculation subjects: At least 50% of questions must involve actual numbers and computation.
+7. Solutions must be detailed with step-by-step working, not just final answers.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
   const prompt = patternText
     ? `You are an expert ${subject} educator and professional LaTeX exam paper creator.
 
 TASK: Generate a NEW exam question paper that EXACTLY replicates the structure and format described in the pattern analysis below, using ONLY content from the provided PDF textbook (attached).
 
+${universalQualityDirective}
+
+${guidelines}
+
 === QUESTION PAPER PATTERN ANALYSIS ===
 ${patternText}
 === END OF PATTERN ANALYSIS ===
 
-Read the attached PDF textbook carefully and generate questions based on its content.${customInstructionsSection}
+Read the attached PDF textbook THOROUGHLY — identify ALL chapters, units, and sections. Generate questions covering ALL chapters/topics, distributed as evenly as possible across the entire textbook.${customInstructionsSection}
 
 GENERATION RULES:
 1. Create a COMPLETE, compilable LaTeX document (\\documentclass through \\end{document})
 2. QUESTION-BY-QUESTION TYPE MATCHING: For every question in the pattern, generate the SAME type at the SAME position
 3. Match the pattern's structure EXACTLY: sections, question counts, marks distribution
-4. Generate NEW questions from the textbook — do NOT copy pattern questions
+4. Generate NEW, INNOVATIVE questions from the textbook — do NOT copy pattern questions
 5. Difficulty level: ${difficulty}
-6. Distribute questions evenly across all chapters/topics
+6. **MANDATORY**: Distribute questions across ALL chapters/topics in the textbook. If the textbook has 8 chapters, questions must come from all 8 chapters.
 7. For EVERY question, include a solution wrapped in:
    % START SOLUTION
-   [Step-by-step solution]
+   [Step-by-step solution with detailed working]
    % END SOLUTION
 8. Use proper LaTeX: amsmath, amssymb, geometry, enumitem, fancyhdr
 9. Use $...$ for inline math, \\[...\\] for display math
-10. For MCQs: use (a)(b)(c)(d) format
+10. For MCQs: use (a)(b)(c)(d) format with plausible distractors
 11. For fill-in-blanks: use \\underline{\\hspace{3cm}}
 12. For Column Matching: use LaTeX tabular with shuffled Column B
+
 IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no explanations, no code fences.`
     : `You are an expert ${subject} educator and LaTeX document formatter.
 
-Read the attached PDF textbook carefully and generate high-quality ${subject} questions based on its content.${questionBreakdown}${customInstructionsSection}
+${universalQualityDirective}
 
-Subject Guidelines:
 ${guidelines}
+
+Read the attached PDF textbook THOROUGHLY. First, identify ALL chapters, units, and sections in the textbook. Then generate high-quality ${subject} questions covering ALL chapters equally.${questionBreakdown}${customInstructionsSection}
 
 Question Requirements:
 - Question types: ${questionTypeDesc}
 - Difficulty level: ${difficulty}
-- Distribute questions EVENLY across ALL chapters/topics in the PDF
-- Each question should be clear and well-formatted
-- Provide detailed step-by-step solutions
+- **MANDATORY**: Distribute questions EVENLY across ALL chapters/topics in the PDF. Every chapter must be represented.
+- Each question should be INNOVATIVE and EXAM-STANDARD — not basic recall
+- Provide detailed step-by-step solutions with full working
 
 Format your response ENTIRELY in LaTeX using this structure:
 
