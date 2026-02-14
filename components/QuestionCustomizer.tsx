@@ -29,7 +29,8 @@ interface QuestionConfig {
 interface Props {
   config: QuestionConfig;
   onConfigChange: (config: QuestionConfig) => void;
-  mode: 'pattern' | 'custom';
+  mode: 'pattern' | 'custom' | 'ai-magic' | null;
+  onModeChange?: (mode: 'pattern' | 'custom' | 'ai-magic') => void;
 }
 
 const SUBJECTS = [
@@ -227,9 +228,9 @@ const CLASS_CATEGORIES = [
   }
 ];
 
-type Step = 'class' | 'subject' | 'difficulty' | 'customize' | 'complete';
+type Step = 'class' | 'subject' | 'difficulty' | 'modeSelection' | 'customize' | 'complete';
 
-export default function QuestionCustomizer({ config, onConfigChange, mode }: Props) {
+export default function QuestionCustomizer({ config, onConfigChange, mode, onModeChange }: Props) {
   const [step, setStep] = useState<Step>('class');
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -260,15 +261,19 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
   function handleSwipeLeft() {
     if (step === 'class') goToStep('subject');
     else if (step === 'subject') goToStep('difficulty');
-    else if (step === 'difficulty') goToStep(mode === 'pattern' ? 'complete' : 'customize');
+    else if (step === 'difficulty') goToStep('modeSelection');
+    else if (step === 'modeSelection') {
+      // Mode-specific navigation handled in mode selection
+    }
     else if (step === 'customize') goToStep('complete');
   }
 
   function handleSwipeRight() {
     if (step === 'subject') goToStep('class');
     else if (step === 'difficulty') goToStep('subject');
-    else if (step === 'customize') goToStep('difficulty');
-    else if (step === 'complete') goToStep(mode === 'pattern' ? 'difficulty' : 'customize');
+    else if (step === 'modeSelection') goToStep('difficulty');
+    else if (step === 'customize') goToStep('modeSelection');
+    else if (step === 'complete') goToStep(mode === 'pattern' || mode === 'ai-magic' ? 'modeSelection' : 'customize');
   }
 
   function goToStep(newStep: Step) {
@@ -276,13 +281,16 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
   }
 
   const getStepNumber = () => {
-    const steps = mode === 'pattern' 
-      ? ['class', 'subject', 'difficulty', 'complete'] 
-      : ['class', 'subject', 'difficulty', 'customize', 'complete'];
+    const steps = ['class', 'subject', 'difficulty', 'modeSelection'];
+    if (mode === 'custom') {
+      steps.push('customize', 'complete');
+    } else {
+      steps.push('complete');
+    }
     return steps.indexOf(step) + 1;
   };
 
-  const getTotalSteps = () => mode === 'pattern' ? 4 : 5;
+  const getTotalSteps = () => mode === 'custom' ? 6 : 5;
 
   // Get current class level category
   const getCurrentClassLevel = (): string => {
@@ -405,7 +413,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
             key={diff.value}
             onClick={() => {
               onConfigChange({ ...config, difficulty: diff.value });
-              goToStep(mode === 'pattern' ? 'complete' : 'customize');
+              goToStep('modeSelection');
             }}
             className={`py-3 px-2 rounded-lg font-semibold text-xs md:text-sm transition-all ${
               config.difficulty === diff.value
@@ -419,6 +427,94 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
       </div>
     </div>
   );
+
+  const renderModeSelector = () => {
+    const handleAIMagic = () => {
+      // Auto-apply the configuration
+      const autoConfig = AUTO_FILL_CONFIGS[config.studentClass]?.[config.subject];
+      if (autoConfig) {
+        onConfigChange({
+          ...config,
+          questionsByType: { ...autoConfig.questionsByType },
+          questionsByMarks: { ...autoConfig.questionsByMarks },
+        });
+      }
+      if (onModeChange) onModeChange('ai-magic');
+      goToStep('complete');
+    };
+
+    const handleUploadTemplate = () => {
+      if (onModeChange) onModeChange('pattern');
+      goToStep('complete');
+    };
+
+    const handleCustom = () => {
+      if (onModeChange) onModeChange('custom');
+      goToStep('customize');
+    };
+
+    return (
+      <div className="animate-fadeIn">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">Choose Generation Mode</h3>
+        <p className="text-xs text-gray-500 mb-4">Select how you want to generate your questions</p>
+        <div className="space-y-3">
+          {/* AI Magic - First */}
+          <button
+            onClick={handleAIMagic}
+            className={`w-full p-4 border-2 rounded-xl hover:shadow-lg transition-all text-left space-y-2 group ${
+              mode === 'ai-magic'
+                ? 'border-purple-600 bg-purple-50'
+                : 'border-purple-200 hover:border-purple-400'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="text-3xl">✨</div>
+              <div className="flex-1">
+                <h4 className="text-base font-bold text-gray-800 group-hover:text-purple-600">AI Magic</h4>
+                <p className="text-xs text-gray-600 mt-1">Let our AI decide the best question pattern for you</p>
+              </div>
+            </div>
+          </button>
+
+          {/* Upload Template - Second */}
+          <button
+            onClick={handleUploadTemplate}
+            className={`w-full p-4 border-2 rounded-xl hover:shadow-lg transition-all text-left space-y-2 group ${
+              mode === 'pattern'
+                ? 'border-blue-600 bg-blue-50'
+                : 'border-blue-200 hover:border-blue-400'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="text-3xl">📋</div>
+              <div className="flex-1">
+                <h4 className="text-base font-bold text-gray-800 group-hover:text-blue-600">Upload Template</h4>
+                <p className="text-xs text-gray-600 mt-1">Upload a sample paper to match format and structure</p>
+              </div>
+            </div>
+          </button>
+
+          {/* Make Your Own - Third */}
+          <button
+            onClick={handleCustom}
+            className={`w-full p-4 border-2 rounded-xl hover:shadow-lg transition-all text-left space-y-2 group ${
+              mode === 'custom'
+                ? 'border-green-600 bg-green-50'
+                : 'border-green-200 hover:border-green-400'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="text-3xl">⚙️</div>
+              <div className="flex-1">
+                <h4 className="text-base font-bold text-gray-800 group-hover:text-green-600">Make Your Own Practice Paper</h4>
+                <p className="text-xs text-gray-600 mt-1">Customize question types and numbers yourself</p>
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   const [errorMessages, setErrorMessages] = useState<{ [key: string]: string }>({});
   const MAX_QUESTIONS_BY_TYPE = 20;
@@ -527,17 +623,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
 
   const renderCustomizeOptions = () => (
     <div className="animate-fadeIn space-y-4">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-gray-800">⚙️ Question Configuration</h3>
-        {AUTO_FILL_CONFIGS[config.studentClass]?.[config.subject] && (
-          <button
-            onClick={handleAutoFill}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-2 px-4 rounded-lg text-xs md:text-sm hover:from-purple-700 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
-          >
-            ✨ Auto Fill
-          </button>
-        )}
-      </div>
+      <h3 className="text-lg font-bold text-gray-800 mb-4">⚙️ Question Configuration</h3>
       
       {/* Question Types */}
       <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 space-y-3">
@@ -748,6 +834,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
         {step === 'class' && renderClassSelector()}
         {step === 'subject' && renderSubjectSelector()}
         {step === 'difficulty' && renderDifficultySelector()}
+        {step === 'modeSelection' && renderModeSelector()}
         {step === 'customize' && renderCustomizeOptions()}
         {step === 'complete' && renderComplete()}
       </div>
@@ -758,8 +845,9 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
           onClick={() => {
             if (step === 'subject') goToStep('class');
             else if (step === 'difficulty') goToStep('subject');
-            else if (step === 'customize') goToStep('difficulty');
-            else if (step === 'complete') goToStep(mode === 'pattern' ? 'difficulty' : 'customize');
+            else if (step === 'modeSelection') goToStep('difficulty');
+            else if (step === 'customize') goToStep('modeSelection');
+            else if (step === 'complete') goToStep(mode === 'pattern' || mode === 'ai-magic' ? 'modeSelection' : 'customize');
           }}
           className={`btn-secondary py-2 px-3 text-xs md:text-sm ${step === 'class' ? 'opacity-0 pointer-events-none' : ''}`}
         >
@@ -769,10 +857,10 @@ export default function QuestionCustomizer({ config, onConfigChange, mode }: Pro
           onClick={() => {
             if (step === 'class') goToStep('subject');
             else if (step === 'subject') goToStep('difficulty');
-            else if (step === 'difficulty') goToStep(mode === 'pattern' ? 'complete' : 'customize');
+            else if (step === 'difficulty') goToStep('modeSelection');
             else if (step === 'customize') goToStep('complete');
           }}
-          className={`btn-primary py-2 px-3 text-xs md:text-sm ${step === 'complete' ? 'opacity-0 pointer-events-none' : ''}`}
+          className={`btn-primary py-2 px-3 text-xs md:text-sm ${step === 'complete' || step === 'modeSelection' ? 'opacity-0 pointer-events-none' : ''}`}
         >
           Next →
         </button>

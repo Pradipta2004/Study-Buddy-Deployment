@@ -74,7 +74,7 @@ const FEEDBACK_SUBJECTS = [
 
 export default function Home() {
   const [started, setStarted] = useState(false);
-  const [mode, setMode] = useState<'pattern' | 'custom' | null>(null);
+  const [mode, setMode] = useState<'pattern' | 'custom' | 'ai-magic' | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [patternFile, setPatternFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -679,67 +679,24 @@ export default function Home() {
               >
                 Get Started →
               </button>
-              <button
-                onClick={() => { setShowFeedbackForm(true); setFeedbackSuccess(false); setFeedbackError(''); }}
-                className="bg-gradient-to-r from-purple-600 to-indigo-500 text-white font-bold py-4 px-8 rounded-xl hover:shadow-lg transition-all transform hover:scale-105 text-lg md:text-xl"
-              >
-                💬 Share Feedback
-              </button>
             </div>
-          </div>
-        ) : !mode ? (
-          /* Mode Selection Screen */
-          <div className="card p-8 md:p-12 space-y-8 animate-fadeIn">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">How would you like to generate questions?</h2>
-              <p className="text-gray-600">Choose a method that works best for you</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Without Pattern */}
-              <button
-                onClick={() => setMode('custom')}
-                className="p-8 border-2 border-blue-200 rounded-xl hover:border-blue-600 hover:shadow-lg transition-all text-left space-y-4 group"
-              >
-                <div className="text-4xl">⚙️</div>
-                <h3 className="text-xl font-bold text-gray-800 group-hover:text-blue-600">Make your own Practice Question Paper</h3>
-                <p className="text-sm text-gray-600">Choose class, subject, and difficulty level</p>
-                <p className="text-xs text-gray-500">Select specific question types and numbers</p>
-              </button>
-              {/* With Pattern */}
-              <button
-                onClick={() => setMode('pattern')}
-                className="p-8 border-2 border-purple-200 rounded-xl hover:border-purple-600 hover:shadow-lg transition-all text-left space-y-4 group"
-              >
-                <div className="text-4xl">📋</div>
-                <h3 className="text-xl font-bold text-gray-800 group-hover:text-purple-600">Upload Your Template Exam Question Paper</h3>
-                <p className="text-sm text-gray-600">Upload a sample paper to match</p>
-                <p className="text-xs text-gray-500">Replicates format, structure, and style</p>
-              </button>
-            </div>
-            <button
-              onClick={() => setStarted(false)}
-              className="text-gray-500 hover:text-gray-700 text-sm font-semibold text-center w-full"
-            >
-              ← Back
-            </button>
           </div>
         ) : (
           <>
-            {/* Question Customizer - Only for Custom Mode */}
-            {mode === 'custom' && (
-              <QuestionCustomizer config={config} onConfigChange={setConfig} mode="custom" />
-            )}
+            {/* Question Customizer - Shown for all flows */}
+            <QuestionCustomizer 
+              config={config} 
+              onConfigChange={setConfig} 
+              mode={mode}
+              onModeChange={setMode}
+            />
 
-            {/* Question Customizer - For Pattern Mode (only class/subject/difficulty) */}
-            {mode === 'pattern' && (
-              <QuestionCustomizer config={config} onConfigChange={setConfig} mode="pattern" />
-            )}
-
-            {/* Upload Section */}
-            <div className="card p-6 md:p-8 space-y-6">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-3">
-                <span>📤</span> Upload
-              </h2>
+            {/* Upload Section - Only show when mode is selected */}
+            {mode && (
+              <div className="card p-6 md:p-8 space-y-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-3">
+                  <span>📤</span> Upload
+                </h2>
 
               {/* Pattern File Upload - Only for Pattern Mode */}
               {mode === 'pattern' && (
@@ -830,7 +787,7 @@ export default function Home() {
                 )}
               </button>
 
-              {/* Back to Mode Selection */}
+              {/* Back to Start */}
               <button
                 onClick={() => {
                   setMode(null);
@@ -838,12 +795,14 @@ export default function Home() {
                   setPatternFile(null);
                   setLatexContent('');
                   setError('');
+                  setStarted(false);
                 }}
                 className="text-gray-500 hover:text-gray-700 text-sm font-semibold text-center w-full mt-2"
               >
-                ← Back to Options
+                ← Back to Start
               </button>
             </div>
+            )}
 
             {/* Error Message */}
             {error && (
@@ -956,12 +915,20 @@ export default function Home() {
                   </div>
 
                   {/* Generate Another Button */}
-                  <div className="text-center pt-4">
+                  <div className="text-center pt-4 space-y-3">
                     <button
                       onClick={handleResetAndGenerateAnother}
                       className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 px-8 rounded-xl hover:shadow-lg transition-all text-lg"
                     >
                       🔄 Generate Another Question Paper
+                    </button>
+                    
+                    {/* Feedback Button */}
+                    <button
+                      onClick={() => { setShowFeedbackForm(true); setFeedbackSuccess(false); setFeedbackError(''); }}
+                      className="bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold py-3 px-8 rounded-xl hover:shadow-lg transition-all text-lg"
+                    >
+                      💬 Share Your Feedback
                     </button>
                   </div>
                 </div>
