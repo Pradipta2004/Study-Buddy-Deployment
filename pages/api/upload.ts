@@ -331,6 +331,219 @@ async function extractTextFromPDF(filePath: string): Promise<ExtractionResult> {
   }
 }
 
+async function generateQuestionsDirectFromPDF(
+  filePath: string,
+  metadata: PDFMetadata,
+  patternText?: string
+): Promise<ExtractionResult> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY is not configured');
+  }
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`File not found at: ${filePath}`);
+  }
+  const stats = fs.statSync(filePath);
+  if (stats.size === 0) {
+    throw new Error('File is empty (0 bytes).');
+  }
+
+  const dataBuffer = fs.readFileSync(filePath);
+  const base64Data = dataBuffer.toString('base64');
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+  const subject = metadata.subject || 'mathematics';
+  const questionTypes = metadata.questionTypes || ['problem-solving', 'conceptual', 'application'];
+  const difficulty = metadata.difficulty || 'mixed';
+  const questionTypeDesc = questionTypes.join(', ');
+
+  // Build question breakdown
+  let questionBreakdown = '';
+  if (metadata.questionsByType) {
+    const types = metadata.questionsByType;
+    const parts: string[] = [];
+    if (types.mcq > 0) parts.push(`${types.mcq} Multiple Choice Questions (MCQ)`);
+    if (types.fillInBlanks > 0) parts.push(`${types.fillInBlanks} Fill in the Blanks questions`);
+    if (types.trueFalse > 0) parts.push(`${types.trueFalse} True/False questions`);
+    if (types.columnMatching > 0) parts.push(`${types.columnMatching} Column Matching questions`);
+    if (types.general > 0) parts.push(`${types.general} General questions`);
+    if (parts.length > 0) {
+      questionBreakdown += '\n\n1 Mark Questions:\n' + parts.map(p => `- ${p}`).join('\n');
+    }
+  }
+  if (metadata.questionsByMarks) {
+    const marks = metadata.questionsByMarks;
+    const parts: string[] = [];
+    if (marks['2'] > 0) parts.push(`${marks['2']} questions of 2 marks each`);
+    if (marks['3'] > 0) parts.push(`${marks['3']} questions of 3 marks each`);
+    if (marks['4'] > 0) parts.push(`${marks['4']} questions of 4 marks each`);
+    if (marks['5'] > 0) parts.push(`${marks['5']} questions of 5 marks each`);
+    if (marks['6'] > 0) parts.push(`${marks['6']} questions of 6 marks each`);
+    if (marks['10'] > 0) parts.push(`${marks['10']} questions of 10 marks each`);
+    if (parts.length > 0) {
+      questionBreakdown += '\n\nQuestions by Marks:\n' + parts.map(p => `- ${p}`).join('\n');
+    }
+  }
+
+  const customInstructionsSection = metadata.customInstructions 
+    ? `\n\nCUSTOM INSTRUCTIONS (HIGHEST PRIORITY — follow these carefully, they override other settings):\n${metadata.customInstructions}`
+    : '';
+
+  const subjectSpecificGuidelines: { [key: string]: string } = {
+    mathematics: '- 40% Numerical/Computational, 30% Conceptual, 20% Application, 10% Theorem-based\n- Include actual calculations with step-by-step solutions\n- Equal coverage across all chapters/topics',
+    physics: '- 50% Numerical with SI units, 25% Derivations, 15% Theory, 10% Diagram-based\n- Include realistic values and proper units',
+    chemistry: '- 40% Numerical (stoichiometry, molarity), 30% Reactions, 20% Properties, 10% Experimental\n- Use accurate molar masses and formulas',
+    biology: '- 50% Descriptive, 25% Diagram-based, 15% Application, 10% Numerical\n- Use proper scientific terminology',
+    history: '- 40% Analytical, 30% Descriptive, 20% Chronological, 10% Comparative\n- Include specific dates, names, places',
+    english: '- 30% Comprehension, 25% Grammar, 25% Literature, 20% Composition\n- Include text excerpts and grammar examples',
+  };
+
+  const guidelines = subjectSpecificGuidelines[subject] || '- Equal topic coverage\n- Clear, specific questions\n- Test understanding, not just recall';
+
+  const prompt = patternText
+    ? `You are an expert ${subject} educator and professional LaTeX exam paper creator.
+
+TASK: Generate a NEW exam question paper that EXACTLY replicates the structure and format described in the pattern analysis below, using ONLY content from the provided PDF textbook (attached).
+
+=== QUESTION PAPER PATTERN ANALYSIS ===
+${patternText}
+=== END OF PATTERN ANALYSIS ===
+
+Read the attached PDF textbook carefully and generate questions based on its content.${customInstructionsSection}
+
+GENERATION RULES:
+1. Create a COMPLETE, compilable LaTeX document (\\documentclass through \\end{document})
+2. QUESTION-BY-QUESTION TYPE MATCHING: For every question in the pattern, generate the SAME type at the SAME position
+3. Match the pattern's structure EXACTLY: sections, question counts, marks distribution
+4. Generate NEW questions from the textbook — do NOT copy pattern questions
+5. Difficulty level: ${difficulty}
+6. Distribute questions evenly across all chapters/topics
+7. For EVERY question, include a solution wrapped in:
+   % START SOLUTION
+   [Step-by-step solution]
+   % END SOLUTION
+8. Use proper LaTeX: amsmath, amssymb, geometry, enumitem, fancyhdr
+9. Use $...$ for inline math, \\[...\\] for display math
+10. For MCQs: use (a)(b)(c)(d) format
+11. For fill-in-blanks: use \\underline{\\hspace{3cm}}
+12. For Column Matching: use LaTeX tabular with shuffled Column B
+IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no explanations, no code fences.`
+    : `You are an expert ${subject} educator and LaTeX document formatter.
+
+Read the attached PDF textbook carefully and generate high-quality ${subject} questions based on its content.${questionBreakdown}${customInstructionsSection}
+
+Subject Guidelines:
+${guidelines}
+
+Question Requirements:
+- Question types: ${questionTypeDesc}
+- Difficulty level: ${difficulty}
+- Distribute questions EVENLY across ALL chapters/topics in the PDF
+- Each question should be clear and well-formatted
+- Provide detailed step-by-step solutions
+
+Format your response ENTIRELY in LaTeX using this structure:
+
+\\documentclass[12pt,a4paper]{article}
+\\usepackage{amsmath}
+\\usepackage{amssymb}
+\\usepackage{geometry}
+\\usepackage{enumitem}
+\\usepackage{fancyhdr}
+\\usepackage{graphicx}
+\\geometry{margin=0.75in, top=1in, bottom=1in}
+
+\\pagestyle{fancy}
+\\fancyhf{}
+\\fancyhead[L]{\\textbf{${subject.charAt(0).toUpperCase() + subject.slice(1)} Examination}}
+\\fancyhead[R]{\\textbf{Page \\thepage}}
+\\fancyfoot[C]{\\small All questions carry marks as indicated}
+
+\\begin{document}
+
+\\begin{center}
+{\\Large \\textbf{EXAMINATION PAPER}}\\\\[0.3cm]
+{\\large \\textbf{Subject: ${subject.charAt(0).toUpperCase() + subject.slice(1)}}}\\\\[0.2cm]
+{\\textbf{Difficulty Level: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}}}\\\\[0.2cm]
+\\rule{\\textwidth}{0.4pt}
+\\end{center}
+
+\\vspace{0.3cm}
+
+\\noindent\\fbox{\\parbox{\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule}{
+\\textbf{INSTRUCTIONS TO CANDIDATES:}\\\\[0.2cm]
+\\begin{itemize}[leftmargin=*, itemsep=0pt]
+\\item Read all questions carefully before attempting.
+\\item Show all working for full credit.
+\\item Marks for each question are indicated in brackets.
+\\end{itemize}
+}}
+
+\\vspace{0.5cm}
+\\section*{QUESTIONS}
+
+[Generate each question as:
+\\subsection*{Question N [X marks]}
+[Question text]
+
+% START SOLUTION
+\\subsection*{Solution}
+[Detailed solution]
+% END SOLUTION
+
+\\vspace{0.5cm}
+]
+
+\\end{document}
+
+CRITICAL FORMATTING:
+- Use \\subsection*{Question N [X marks]} for each question
+- Wrap EVERY solution with % START SOLUTION and % END SOLUTION
+- Use $...$ for inline math, $$...$$ for display math
+- For MCQs: (a), (b), (c), (d) format
+- For Fill in Blanks: \\underline{\\hspace{3cm}}
+- For Column Matching: LaTeX tabular with shuffled Column B
+- Number questions consecutively starting from 1
+
+IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no code fences.`;
+
+  console.log(`Sending PDF directly to Gemini for question generation (${(stats.size / 1024 / 1024).toFixed(2)} MB)...`);
+  
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Question generation timed out. Try with a smaller PDF or fewer questions.')), 240000);
+  });
+
+  const result = await Promise.race([
+    model.generateContent([
+      { inlineData: { mimeType: 'application/pdf', data: base64Data } },
+      { text: prompt }
+    ]),
+    timeoutPromise
+  ]);
+
+  const response = await result.response;
+  const responseText = response.text();
+  
+  const usage = response.usageMetadata;
+  console.log(`Direct PDF generation complete. Response length: ${responseText.length}. Tokens: ${usage?.totalTokenCount || 'N/A'}`);
+
+  if (!responseText || responseText.trim().length === 0) {
+    throw new Error('Gemini returned empty response');
+  }
+
+  return {
+    text: responseText,
+    tokens: {
+      promptTokens: usage?.promptTokenCount || 0,
+      outputTokens: usage?.candidatesTokenCount || 0,
+      totalTokens: usage?.totalTokenCount || 0
+    }
+  };
+}
+
 async function generateQuestionsWithGemini(
   pdfText: string,
   metadata: PDFMetadata,
@@ -1109,103 +1322,51 @@ export default async function handler(
           }
         }
 
-        // Extract text from PDF(s) — run in PARALLEL for pattern mode to save time
-        // Use retry logic to handle transient Gemini rate limits / server errors
-        console.log('Starting PDF extraction...' + (patternFilePath ? ' (parallel: content + pattern)' : ''));
-
-        const contentPromise = withRetry(
-          () => extractTextFromPDF(filePath),
-          { maxRetries: 2, baseDelay: 3000, label: 'content-extraction' }
-        );
-
-        // For pattern mode: use specialized structure extractor (not raw text)
-        // This produces a compact structural analysis instead of huge raw text
-        const patternPromise = patternFilePath
-          ? withRetry(
-              () => extractPatternStructure(patternFilePath),
-              { maxRetries: 2, baseDelay: 4000, label: 'pattern-analysis' }
-            )
-          : Promise.resolve(undefined);
-
-        let pdfText: string;
-        let patternText: string | undefined;
+        // DIRECT PDF-to-Gemini: Send PDF directly to Gemini for question generation
+        // This is faster and more accurate than extracting text first
         const tokenStats = { extraction: { promptTokens: 0, outputTokens: 0, totalTokens: 0 }, pattern: { promptTokens: 0, outputTokens: 0, totalTokens: 0 }, generation: { promptTokens: 0, outputTokens: 0, totalTokens: 0 }, total: { promptTokens: 0, outputTokens: 0, totalTokens: 0 } };
 
+        let latexContent = '';
+        let patternText: string | undefined;
+
         try {
-          const [contentResult, patternResult] = await Promise.all([contentPromise, patternPromise]);
-          pdfText = contentResult.text;
-          tokenStats.extraction = contentResult.tokens;
-          if (patternResult) {
+          // If pattern file is provided, analyze its structure first
+          if (patternFilePath) {
+            console.log('Analyzing pattern PDF structure...');
+            const patternResult = await withRetry(
+              () => extractPatternStructure(patternFilePath),
+              { maxRetries: 2, baseDelay: 4000, label: 'pattern-analysis' }
+            );
             patternText = patternResult.text;
             tokenStats.pattern = patternResult.tokens;
-          }
-        } catch (extractionError: any) {
-          // Clean up uploaded files on extraction failure
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-          if (patternFilePath && fs.existsSync(patternFilePath)) fs.unlinkSync(patternFilePath);
+            console.log('Pattern analysis complete. Length:', patternText.length);
 
-          const msg = extractionError.message || 'PDF extraction failed';
-          console.error('Extraction error:', msg);
-
-          // Provide user-friendly error messages
-          if (msg.includes('rate limit') || msg.includes('quota') || msg.includes('429')) {
-            return res.status(429).json({ error: 'API rate limit reached. Please wait 30 seconds and try again.' });
-          }
-          if (msg.includes('timed out') || msg.includes('timeout')) {
-            return res.status(504).json({ error: 'PDF processing timed out. Try a smaller PDF file.' });
-          }
-          return res.status(500).json({ error: msg });
-        }
-
-        console.log('PDF text extraction complete. Length:', pdfText.length);
-        if (patternText) {
-          console.log('Pattern analysis complete. Length:', patternText.length);
-        }
-
-        if (!pdfText.trim()) {
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-          if (patternFilePath && fs.existsSync(patternFilePath)) fs.unlinkSync(patternFilePath);
-          return res.status(400).json({ error: 'Could not extract text from PDF. The file may be image-only or corrupted.' });
-        }
-
-        // Generate questions using Gemini (with delay to avoid rate limits after extraction)
-        let latexContent = '';
-        try {
-          // Use smaller content limit when pattern is present (pattern analysis is already compact)
-          const MAX_CONTENT_CHARS = patternText ? 50000 : 80000;
-
-          const contentForPrompt = truncateForPrompt(pdfText, MAX_CONTENT_CHARS, 'CONTENT');
-
-          console.log(
-            `Sending to Gemini: content ${contentForPrompt.text.length}/${contentForPrompt.originalLength}` +
-              (contentForPrompt.truncated ? ' (truncated)' : '') +
-              `, pattern analysis ${patternText ? patternText.length : 0} chars`
-          );
-
-          // Add delay before generation to avoid rate limits (especially after parallel extraction)
-          if (patternText) {
+            // Small delay to avoid rate limits after pattern analysis
             console.log('Waiting 2s before generation to avoid rate limits...');
             await delay(2000);
           }
 
+          // Send PDF directly to Gemini with the question generation prompt
+          console.log('Sending PDF directly to Gemini for question generation...');
           const genResult = await withRetry(
-            () => generateQuestionsWithGemini(
-              contentForPrompt.text,
-              metadata,
-              patternText || undefined
-            ),
-            { maxRetries: 1, baseDelay: 5000, label: 'question-generation' }
+            () => generateQuestionsDirectFromPDF(filePath, metadata, patternText),
+            { maxRetries: 1, baseDelay: 5000, label: 'direct-pdf-generation' }
           );
           latexContent = genResult.text;
           tokenStats.generation = genResult.tokens;
         } catch (geminiError: any) {
           console.error('Gemini API error:', geminiError);
           const msg = geminiError.message || 'Unknown error';
+
+          // Clean up files on error
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+          if (patternFilePath && fs.existsSync(patternFilePath)) fs.unlinkSync(patternFilePath);
+
           if (msg.includes('rate') || msg.includes('quota') || msg.includes('429')) {
-            throw new Error('AI service rate limit reached. Please wait a minute and try again.');
+            return res.status(429).json({ error: 'AI service rate limit reached. Please wait a minute and try again.' });
           }
           if (msg.includes('timed out') || msg.includes('timeout')) {
-            throw new Error('Question generation timed out. Try with a smaller textbook PDF.');
+            return res.status(504).json({ error: 'Question generation timed out. Try with a smaller textbook PDF.' });
           }
           throw new Error(`AI generation failed: ${msg}`);
         }

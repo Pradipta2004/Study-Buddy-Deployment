@@ -228,7 +228,7 @@ const CLASS_CATEGORIES = [
   }
 ];
 
-type Step = 'class' | 'subject' | 'difficulty' | 'modeSelection' | 'customize' | 'complete';
+type Step = 'class' | 'subject' | 'difficulty' | 'modeSelection' | 'customize' | 'instructions' | 'complete';
 
 export default function QuestionCustomizer({ config, onConfigChange, mode, onModeChange }: Props) {
   const [step, setStep] = useState<Step>('class');
@@ -265,7 +265,8 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
     else if (step === 'modeSelection') {
       // Mode-specific navigation handled in mode selection
     }
-    else if (step === 'customize') goToStep('complete');
+    else if (step === 'customize') goToStep('instructions');
+    else if (step === 'instructions') goToStep('complete');
   }
 
   function handleSwipeRight() {
@@ -273,7 +274,8 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
     else if (step === 'difficulty') goToStep('subject');
     else if (step === 'modeSelection') goToStep('difficulty');
     else if (step === 'customize') goToStep('modeSelection');
-    else if (step === 'complete') goToStep(mode === 'pattern' || mode === 'ai-magic' ? 'modeSelection' : 'customize');
+    else if (step === 'instructions') goToStep(mode === 'custom' ? 'customize' : 'modeSelection');
+    else if (step === 'complete') goToStep('instructions');
   }
 
   function goToStep(newStep: Step) {
@@ -283,14 +285,14 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
   const getStepNumber = () => {
     const steps = ['class', 'subject', 'difficulty', 'modeSelection'];
     if (mode === 'custom') {
-      steps.push('customize', 'complete');
+      steps.push('customize', 'instructions', 'complete');
     } else {
-      steps.push('complete');
+      steps.push('instructions', 'complete');
     }
     return steps.indexOf(step) + 1;
   };
 
-  const getTotalSteps = () => mode === 'custom' ? 6 : 5;
+  const getTotalSteps = () => mode === 'custom' ? 7 : 6;
 
   // Get current class level category
   const getCurrentClassLevel = (): string => {
@@ -440,12 +442,12 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
         });
       }
       if (onModeChange) onModeChange('ai-magic');
-      goToStep('complete');
+      goToStep('instructions');
     };
 
     const handleUploadTemplate = () => {
       if (onModeChange) onModeChange('pattern');
-      goToStep('complete');
+      goToStep('instructions');
     };
 
     const handleCustom = () => {
@@ -616,7 +618,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
       });
       // Move to the next step after a short delay to show the filled values
       setTimeout(() => {
-        goToStep('complete');
+        goToStep('instructions');
       }, 300);
     }
   };
@@ -771,6 +773,90 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
     </div>
   );
 
+  const INSTRUCTION_SUGGESTIONS = [
+    'Generate questions from the last chapter only',
+    'Generate questions from Chapter 1, 2, and 3',
+    'Include critical thinking and paragraph-based questions',
+    'Mention chapter name for each question',
+    'Focus on important theorems and formulas',
+    'Include previous year exam style questions',
+    'Add diagram-based questions where applicable',
+    'Generate questions covering all key definitions',
+    'Include case study based questions',
+    'Make 50% questions application-based',
+  ];
+
+  const renderCustomInstructions = () => (
+    <div className="animate-fadeIn space-y-4">
+      <h3 className="text-lg font-bold text-gray-800 mb-2">📝 Custom Instructions</h3>
+      <p className="text-xs text-gray-500 mb-3">
+        Tell the AI exactly what you want. These instructions get <span className="font-bold text-purple-600">highest priority</span>.
+      </p>
+
+      {/* Textarea */}
+      <div className="relative">
+        <textarea
+          value={config.customInstructions || ''}
+          onChange={(e) => onConfigChange({ ...config, customInstructions: e.target.value })}
+          placeholder="e.g. Generate questions from last chapter only, include paragraph-based questions, mention chapter names..."
+          rows={4}
+          maxLength={500}
+          className="w-full px-4 py-3 rounded-lg border-2 border-purple-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none text-sm text-gray-800 resize-none transition-all bg-white placeholder:text-gray-400"
+        />
+        <span className="absolute bottom-2 right-3 text-xs text-gray-400">
+          {(config.customInstructions || '').length}/500
+        </span>
+      </div>
+
+      {/* Quick suggestion chips */}
+      <div>
+        <p className="text-xs font-semibold text-gray-600 mb-2">💡 Quick suggestions (click to add):</p>
+        <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+          {INSTRUCTION_SUGGESTIONS.map((suggestion, idx) => (
+            <button
+              key={idx}
+              onClick={() => {
+                const current = config.customInstructions || '';
+                const separator = current.trim() ? '. ' : '';
+                const newInstructions = (current.trim() + separator + suggestion).slice(0, 500);
+                onConfigChange({ ...config, customInstructions: newInstructions });
+              }}
+              className="px-3 py-1.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 hover:border-purple-400 transition-all whitespace-nowrap"
+            >
+              + {suggestion}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Clear button */}
+      {config.customInstructions && (
+        <button
+          onClick={() => onConfigChange({ ...config, customInstructions: '' })}
+          className="text-xs text-red-500 hover:text-red-700 font-medium"
+        >
+          ✕ Clear instructions
+        </button>
+      )}
+
+      {/* Skip / Continue */}
+      <div className="flex gap-2 pt-2">
+        <button
+          onClick={() => goToStep('complete')}
+          className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 px-4 rounded-lg text-xs transition-all"
+        >
+          Skip →
+        </button>
+        <button
+          onClick={() => goToStep('complete')}
+          className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg text-xs transition-all"
+        >
+          Continue →
+        </button>
+      </div>
+    </div>
+  );
+
   const renderComplete = () => {
     // Find the class label from CLASS_CATEGORIES
     const getClassLabel = () => {
@@ -799,6 +885,11 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
                 <p><span className="font-bold">Types:</span> {getTotalQuestionsByType()}</p>
                 <p><span className="font-bold">Marks:</span> {getTotalQuestionsByMarks()}</p>
               </>
+            )}
+            {config.customInstructions && (
+              <p className="text-purple-600 italic truncate max-w-xs mx-auto" title={config.customInstructions}>
+                <span className="font-bold text-gray-700">📝 Instructions:</span> {config.customInstructions.substring(0, 60)}{config.customInstructions.length > 60 ? '...' : ''}
+              </p>
             )}
           </div>
           <button
@@ -836,6 +927,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
         {step === 'difficulty' && renderDifficultySelector()}
         {step === 'modeSelection' && renderModeSelector()}
         {step === 'customize' && renderCustomizeOptions()}
+        {step === 'instructions' && renderCustomInstructions()}
         {step === 'complete' && renderComplete()}
       </div>
 
@@ -847,7 +939,8 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
             else if (step === 'difficulty') goToStep('subject');
             else if (step === 'modeSelection') goToStep('difficulty');
             else if (step === 'customize') goToStep('modeSelection');
-            else if (step === 'complete') goToStep(mode === 'pattern' || mode === 'ai-magic' ? 'modeSelection' : 'customize');
+            else if (step === 'instructions') goToStep(mode === 'custom' ? 'customize' : 'modeSelection');
+            else if (step === 'complete') goToStep('instructions');
           }}
           className={`btn-secondary py-2 px-3 text-xs md:text-sm ${step === 'class' ? 'opacity-0 pointer-events-none' : ''}`}
         >
@@ -858,7 +951,8 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
             if (step === 'class') goToStep('subject');
             else if (step === 'subject') goToStep('difficulty');
             else if (step === 'difficulty') goToStep('modeSelection');
-            else if (step === 'customize') goToStep('complete');
+            else if (step === 'customize') goToStep('instructions');
+            else if (step === 'instructions') goToStep('complete');
           }}
           className={`btn-primary py-2 px-3 text-xs md:text-sm ${step === 'complete' || step === 'modeSelection' ? 'opacity-0 pointer-events-none' : ''}`}
         >

@@ -1,149 +1,32 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 
-// Sanitize LaTeX to fix common syntax errors
+// Minimal LaTeX sanitizer — only fix clearly broken syntax without corrupting valid LaTeX.
+// Gemini already produces well-formed LaTeX, so aggressive escaping does more harm than good.
 function sanitizeLatex(latex: string): string {
   let sanitized = latex;
-  
+
   // Fix incorrect enumerate syntax for enumitem package
-  // Old style: \begin{enumerate}[(a)] -> New style: \begin{enumerate}[label=(\alph*)]
   sanitized = sanitized.replace(/\\begin\{enumerate\}\[\(a\)\]/g, '\\begin{enumerate}[label=(\\alph*)]');
   sanitized = sanitized.replace(/\\begin\{enumerate\}\[\(i\)\]/g, '\\begin{enumerate}[label=(\\roman*)]');
   sanitized = sanitized.replace(/\\begin\{enumerate\}\[\(1\)\]/g, '\\begin{enumerate}[label=(\\arabic*)]');
   sanitized = sanitized.replace(/\\begin\{enumerate\}\[a\)\]/g, '\\begin{enumerate}[label=\\alph*)]');
   sanitized = sanitized.replace(/\\begin\{enumerate\}\[1\)\]/g, '\\begin{enumerate}[label=\\arabic*)]');
-  
-  // Fix bare underscores outside math mode
-  // First, protect math mode content and tabular environments
-  const mathBlocks: string[] = [];
-  const verbatimBlocks: string[] = [];
-  const tabularBlocks: string[] = [];
-  let counter = 0;
-  
-  // Temporarily replace tabular/table environments (they use & as column separator)
-  sanitized = sanitized.replace(/\\begin\{tabular\}(\[[^\]]*\])?\{[^}]*\}[\s\S]*?\\end\{tabular\}/g, (match) => {
-    const placeholder = `TABULARBLOCK${counter}`;
-    tabularBlocks[counter] = match;
-    counter++;
-    return placeholder;
-  });
-  
-  // Also protect longtable environments
-  sanitized = sanitized.replace(/\\begin\{longtable\}(\[[^\]]*\])?\{[^}]*\}[\s\S]*?\\end\{longtable\}/g, (match) => {
-    const placeholder = `TABULARBLOCK${counter}`;
-    tabularBlocks[counter] = match;
-    counter++;
-    return placeholder;
-  });
-  
-  // Also protect array environments (used in math for column alignment)
-  sanitized = sanitized.replace(/\\begin\{array\}\{[^}]*\}[\s\S]*?\\end\{array\}/g, (match) => {
-    const placeholder = `TABULARBLOCK${counter}`;
-    tabularBlocks[counter] = match;
-    counter++;
-    return placeholder;
-  });
 
-  // Temporarily replace inline math
-  sanitized = sanitized.replace(/\$([^$]+)\$/g, (match) => {
-    const placeholder = `MATHBLOCK${counter}`;
-    mathBlocks[counter] = match;
-    counter++;
-    return placeholder;
-  });
-  
-  // Temporarily replace display math
-  sanitized = sanitized.replace(/\\\[([^\]]+)\\\]/g, (match) => {
-    const placeholder = `MATHBLOCK${counter}`;
-    mathBlocks[counter] = match;
-    counter++;
-    return placeholder;
-  });
-  
-  // Temporarily replace display math $$...$$
-  sanitized = sanitized.replace(/\$\$([\s\S]+?)\$\$/g, (match) => {
-    const placeholder = `MATHBLOCK${counter}`;
-    mathBlocks[counter] = match;
-    counter++;
-    return placeholder;
-  });
-  
-  // Temporarily replace verbatim content
-  sanitized = sanitized.replace(/\\verb([^a-zA-Z])(.+?)\1/g, (match) => {
-    const placeholder = `VERBBLOCK${counter}`;
-    verbatimBlocks[counter] = match;
-    counter++;
-    return placeholder;
-  });
-  
-  // Temporarily replace LaTeX comments (lines starting with %)
-  const commentLines: { [key: string]: string } = {};
-  let commentCounter = 0;
-  sanitized = sanitized.replace(/^[ \t]*%.*/gm, (match) => {
-    const placeholder = `LATEXCOMMENT${commentCounter}`;
-    commentLines[placeholder] = match;
-    commentCounter++;
-    return placeholder;
-  });
-
-  // Fix bare special characters outside math mode
-  sanitized = sanitized.replace(/(?<!\\)_(?![_\s])/g, '\\_');
-  sanitized = sanitized.replace(/(?<!\\)&/g, '\\&');
-  sanitized = sanitized.replace(/(?<!\\)#/g, '\\#');
-  sanitized = sanitized.replace(/(?<!\\)\^/g, '\\^{}');
-
-  // IMPORTANT: Do NOT globally escape '%' here.
-  // In LaTeX, '%' begins a comment and is frequently used in templates/patterned papers.
-  // Escaping it would turn comments into visible text (e.g. "\\% For ..."), which is exactly
-  // the artifact the user is seeing.
-  // Instead, only escape numeric percents that are clearly meant to be rendered, like "50%".
-  sanitized = sanitized.replace(/(\d)\s*%(\s|$)/g, '$1\\\\%$2');
-  
-  // Fix sequences of underscores (like _____ for fill-in-the-blanks)
-  // Replace 2 or more consecutive escaped underscores with proper LaTeX blank
-  sanitized = sanitized.replace(/(\\_){2,}/g, (match) => {
-    const length = Math.min(match.length * 0.15, 4); // Cap at 4cm
-    return `\\underline{\\hspace{${length}cm}}`;
-  });
-  
-  // Also handle raw underscore sequences that might have been missed
-  sanitized = sanitized.replace(/_{2,}/g, (match) => {
+  // Fix sequences of raw underscores (like _____ for fill-in-the-blanks) into proper blanks
+  sanitized = sanitized.replace(/_{3,}/g, (match) => {
     const length = Math.min(match.length * 0.3, 4);
     return `\\underline{\\hspace{${length}cm}}`;
   });
-  
-  // Restore math blocks and tabular blocks
-  for (let i = counter - 1; i >= 0; i--) {
-    if (mathBlocks[i]) {
-      sanitized = sanitized.replace(`MATHBLOCK${i}`, mathBlocks[i]);
-    }
-    if (verbatimBlocks[i]) {
-      sanitized = sanitized.replace(`VERBBLOCK${i}`, verbatimBlocks[i]);
-    }
-    if (tabularBlocks[i]) {
-      sanitized = sanitized.replace(`TABULARBLOCK${i}`, tabularBlocks[i]);
-    }
+
+  // Remove extra spaces before braces in common commands
+  sanitized = sanitized.replace(/\\textbf\s*\{/g, '\\textbf{');
+  sanitized = sanitized.replace(/\\textit\s*\{/g, '\\textit{');
+
+  // Ensure document has \end{document}
+  if (sanitized.includes('\\begin{document}') && !sanitized.includes('\\end{document}')) {
+    sanitized += '\n\\end{document}\n';
   }
-  
-  // Restore LaTeX comment lines
-  for (let i = commentCounter - 1; i >= 0; i--) {
-    const placeholder = `LATEXCOMMENT${i}`;
-    if (commentLines[placeholder]) {
-      sanitized = sanitized.replace(placeholder, commentLines[placeholder]);
-    }
-  }
-  
-  // Fix common LaTeX issues
-  sanitized = sanitized.replace(/\\\\/g, '\\\\'); // Ensure proper line breaks
-  sanitized = sanitized.replace(/\\textbf\s*\{/g, '\\textbf{'); // Remove extra spaces
-  sanitized = sanitized.replace(/\\textit\s*\{/g, '\\textit{'); // Remove extra spaces
-  
-  // Fix unmatched braces (basic check)
-  const openBraces = (sanitized.match(/(?<!\\)\{/g) || []).length;
-  const closeBraces = (sanitized.match(/(?<!\\)\}/g) || []).length;
-  if (openBraces > closeBraces) {
-    console.warn(`Unmatched braces detected: ${openBraces} open, ${closeBraces} close`);
-  }
-  
+
   return sanitized;
 }
 
@@ -198,31 +81,59 @@ export default async function handler(
 
     try {
       // Compile LaTeX to PDF using external service
-      const response = await fetch('https://latex.ytotech.com/builds/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          compiler: 'lualatex',
-          resources: [
-            {
-              main: true,
-              content: processedLatex,
-            },
-          ],
-        }),
-      });
+      // Try pdflatex first (faster, more compatible), fallback to lualatex
+      const compilers = ['pdflatex', 'lualatex'];
+      let pdfData: Buffer | null = null;
+      let lastError = '';
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('LaTeX compilation service error:', errorText);
-        throw new Error(`LaTeX compilation failed: ${response.status} ${response.statusText}`);
+      for (const compiler of compilers) {
+        try {
+          console.log(`Attempting LaTeX compilation with ${compiler}... (content length: ${processedLatex.length})`);
+          const response = await fetch('https://latex.ytotech.com/builds/sync', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              compiler,
+              resources: [
+                {
+                  main: true,
+                  content: processedLatex,
+                },
+              ],
+            }),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`LaTeX compilation failed with ${compiler} (${response.status}):`, errorText.substring(0, 500));
+            lastError = `${compiler}: ${response.status} - ${errorText.substring(0, 200)}`;
+            continue; // Try next compiler
+          }
+
+          const contentType = response.headers.get('content-type') || '';
+          if (!contentType.includes('application/pdf')) {
+            const bodyText = await response.text();
+            console.error(`${compiler} returned non-PDF response:`, bodyText.substring(0, 500));
+            lastError = `${compiler} returned non-PDF content`;
+            continue;
+          }
+
+          const pdfBuffer = await response.arrayBuffer();
+          pdfData = Buffer.from(pdfBuffer);
+          console.log(`LaTeX compilation successful with ${compiler}. PDF size: ${pdfData.length} bytes`);
+          break; // Success
+        } catch (compilerErr: any) {
+          console.error(`${compiler} attempt failed:`, compilerErr.message);
+          lastError = `${compiler}: ${compilerErr.message}`;
+          continue;
+        }
       }
 
-      // Get PDF buffer from response
-      const pdfBuffer = await response.arrayBuffer();
-      const pdfData = Buffer.from(pdfBuffer);
+      if (!pdfData) {
+        throw new Error(`LaTeX compilation failed with all compilers. Last error: ${lastError}`);
+      }
 
       // Format: studdybuddy_subjectname_class_date
       const now = new Date();
