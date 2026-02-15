@@ -915,7 +915,7 @@ export default function Home() {
                   </div>
 
                   {/* Generate Another Button */}
-                  <div className="text-center pt-4 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 pt-6">
                     <button
                       onClick={handleResetAndGenerateAnother}
                       className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3 px-8 rounded-xl hover:shadow-lg transition-all text-lg"

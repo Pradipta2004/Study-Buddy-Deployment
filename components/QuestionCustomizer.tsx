@@ -193,9 +193,9 @@ const AUTO_FILL_CONFIGS: {
 };
 
 const DIFFICULTIES = [
-  { value: 'easy', label: '🟢 easy' },
-  { value: 'medium', label: '🟡 moderate' },
-  { value: 'hard', label: '🔴 difficult' },
+  { value: 'easy', label: '🟢 Easy' },
+  { value: 'medium', label: '🟡 Moderate' },
+  { value: 'hard', label: '🔴 Difficult' },
   //{ value: 'mixed', label: '🎯 mixed' },
 ];
 
@@ -312,64 +312,57 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
     return (
       <div className="animate-fadeIn" ref={dropdownRef}>
         <h3 className="text-lg font-bold text-gray-800 mb-4">Select Class Level</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {CLASS_CATEGORIES.map(category => (
-            <div
-              key={category.value}
-              className="relative"
-              onMouseEnter={() => category.classes.length > 0 && setHoveredCategory(category.value)}
-              onMouseLeave={() => setHoveredCategory(null)}
+        <div className="space-y-4">
+          {/* Category Selection */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Choose Category</label>
+            <select
+              value={
+                config.studentClass === 'college' 
+                  ? 'college' 
+                  : ['11', '12'].includes(config.studentClass)
+                  ? 'higher-secondary'
+                  : 'secondary'
+              }
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === 'college') {
+                  onConfigChange({ ...config, studentClass: 'college' });
+                  goToStep('subject');
+                } else {
+                  setHoveredCategory(value);
+                }
+              }}
+              className="w-full p-3 border-2 border-blue-300 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-600 appearance-none cursor-pointer bg-white"
             >
-              <button
-                onClick={() => {
-                  if (category.value === 'college') {
-                    onConfigChange({ ...config, studentClass: 'college' });
-                    goToStep('subject');
-                  } else {
-                    // Toggle dropdown on click for mobile
-                    setHoveredCategory(hoveredCategory === category.value ? null : category.value);
-                  }
-                }}
-                className={`w-full py-4 px-3 rounded-lg font-semibold text-sm transition-all ${
-                  config.studentClass === category.value || 
-                  (category.value === 'secondary' && ['4', '5', '6', '7', '8', '9', '10'].includes(config.studentClass)) ||
-                  (category.value === 'higher-secondary' && ['11', '12'].includes(config.studentClass))
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'bg-sky-100 text-blue-700 hover:bg-sky-200'
-                }`}
-              >
-                {category.label}
-                {category.classes.length > 0 && (
-                  <span className="text-xs block mt-1 opacity-75">
-                    {hoveredCategory === category.value ? '▲ Select class' : '▼ Click/Hover to select'}
-                  </span>
-                )}
-              </button>
+              <option value="">Select a category</option>
+              <option value="secondary">📚 Secondary (Class 4-10)</option>
+              <option value="higher-secondary">🎓 Higher Secondary (Class 11-12)</option>
+              <option value="college">🏛️ College/University</option>
+            </select>
+          </div>
 
-              {/* Dropdown for classes */}
-              {category.classes.length > 0 && hoveredCategory === category.value && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-blue-300 rounded-lg shadow-xl z-50 overflow-hidden">
-                  {category.classes.map(cls => (
-                    <button
-                      key={cls.value}
-                      onClick={() => {
-                        onConfigChange({ ...config, studentClass: cls.value });
-                        goToStep('subject');
-                        setHoveredCategory(null);
-                      }}
-                      className={`w-full py-2 px-3 text-left text-sm font-medium transition-all ${
-                        config.studentClass === cls.value
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white text-blue-700 hover:bg-blue-50'
-                      }`}
-                    >
-                      {cls.label}
-                    </button>
-                  ))}
-                </div>
-              )}
+          {/* Class Selection (when secondary or higher-secondary is selected) */}
+          {hoveredCategory && hoveredCategory !== 'college' && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Select Class</label>
+              <select
+                value={config.studentClass}
+                onChange={(e) => {
+                  onConfigChange({ ...config, studentClass: e.target.value });
+                  goToStep('subject');
+                }}
+                className="w-full p-3 border-2 border-blue-300 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-600 appearance-none cursor-pointer bg-white"
+              >
+                <option value="">Select your class</option>
+                {CLASS_CATEGORIES.find(c => c.value === hoveredCategory)?.classes.map(cls => (
+                  <option key={cls.value} value={cls.value}>
+                    {cls.label}
+                  </option>
+                ))}
+              </select>
             </div>
-          ))}
+          )}
         </div>
       </div>
     );
@@ -409,7 +402,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
   const renderDifficultySelector = () => (
     <div className="animate-fadeIn">
       <h3 className="text-lg font-bold text-gray-800 mb-4">Select Difficulty</h3>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="flex flex-col gap-3">
         {DIFFICULTIES.map(diff => (
           <button
             key={diff.value}
@@ -417,7 +410,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
               onConfigChange({ ...config, difficulty: diff.value });
               goToStep('modeSelection');
             }}
-            className={`py-3 px-2 rounded-lg font-semibold text-xs md:text-sm transition-all ${
+            className={`py-3 px-4 rounded-lg font-semibold text-base transition-all ${
               config.difficulty === diff.value
                 ? 'bg-blue-600 text-white shadow-lg'
                 : 'bg-sky-100 text-blue-700 hover:bg-sky-200'
