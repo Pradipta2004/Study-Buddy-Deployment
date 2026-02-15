@@ -586,19 +586,79 @@ BANNED: "Define psychology" or "Who is Freud?" as standalone questions.`,
 BANNED: "Define X", "What is X?" as standalone questions. Every question must require THINKING.
 REQUIRED: Cover ALL chapters/topics from the PDF equally.`;
 
-  // Universal quality directive added to ALL prompts
-  const universalQualityDirective = `
-━━━━ UNIVERSAL QUESTION QUALITY RULES (APPLY TO ALL SUBJECTS) ━━━━
-1. NEVER generate basic definition questions like "Define X" or "What is X?" as standalone questions.
-   Definitions may appear as small sub-parts (1-2 marks) of larger questions, but never as the main question.
-2. Every question must require THINKING, ANALYSIS, CALCULATION, or APPLICATION — not just memorization.
-3. COVER ALL CHAPTERS/TOPICS/SECTIONS from the textbook PDF EQUALLY. Do not skip any chapter.
-   First, identify ALL chapters/units in the PDF, then ensure each chapter gets roughly equal number of questions.
-4. Include the CHAPTER NAME or TOPIC in the question or as a label: e.g., "[Chapter 3: Trigonometry]"
-5. Questions should be EXAM-STANDARD — the kind that appear in actual board exams, university exams, or competitive tests.
-6. For numerical/calculation subjects: At least 50% of questions must involve actual numbers and computation.
-7. Solutions must be detailed with step-by-step working, not just final answers.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+  // Use enhanced directive directly in prompts
+  const enhancedUniversalDirective = `
+╔════════════════════════════════════════════════════════════════════════════════════════╗
+║            🎯 UNIVERSAL QUESTION GENERATION STANDARDS - EXAM FOCUSED 🎯               ║
+║                        ⚠️ HIGHEST PRIORITY - MUST FOLLOW ⚠️                          ║
+╚════════════════════════════════════════════════════════════════════════════════════════╝
+
+CRITICAL PRINCIPLE #1: CHALLENGING & EXAM-IMPORTANT QUESTIONS ONLY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✗ NEVER generate "easy" questions suitable for beginners
+✗ NEVER generate definition-based questions as standalone questions
+✗ NEVER generate trivial "memorization" questions  
+✗ NEVER generate "fill-in-the-blank" with obvious answers
+✓ ONLY generate questions that ACTUALLY APPEAR in board exams, competitive tests, or university exams
+✓ ONLY generate questions requiring ANALYSIS, CALCULATION, REASONING, APPLICATION
+✓ ONLY generate questions that challenge students and test deep understanding
+✓ ONLY generate questions from EXAM PAPERS and QUESTION BANKS
+
+DIFFICULTY DISTRIBUTION (${metadata.difficulty || 'mixed'} level):
+- If EASY: 40% medium, 60% easy
+- If MEDIUM: 20% hard, 60% medium, 20% easy
+- If HARD: 50% hard, 40% medium, 10% easy  
+- If MIXED: 30% hard, 50% medium, 20% easy
+
+CRITICAL PRINCIPLE #2: COMPLETE ALL-CHAPTERS COVERAGE (MANDATORY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ STEP 1: Identify ALL chapters, units, topics, or sections in the textbook
+✓ STEP 2: Distribute questions EVENLY across ALL identified chapters
+✓ STEP 3: If the book has N chapters → each chapter gets approximately (Total Questions / N) questions
+✓ STEP 4: NO chapter should be left out, not even briefly mentioned chapters
+✓ STEP 5: Include chapter/topic name in EVERY question or as [Chapter X: ...] label
+✓ STEP 6: Verify coverage at the end - list which chapters are covered in each question
+
+EXAMPLE: If textbook has 8 chapters and you generate 40 questions:
+- Chapter 1: Questions 1, 6, 11, 16, 21, 26 (5 questions)
+- Chapter 2: Questions 2, 7, 12, 17, 22, 27 (5 questions)
+- [Continue for all 8 chapters...]
+
+CRITICAL PRINCIPLE #3: QUESTION QUALITY STANDARDS (NON-NEGOTIABLE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BANNED QUESTIONS (AUTO-REJECT IF FOUND):
+❌ "Define X" as standalone questions
+❌ "What is X?" as full question  
+❌ "State the formula for X"
+❌ "Write the definition of X"
+❌ "List the characteristics of X" (if only a list, not needing analysis)
+❌ Basic recall questions with obvious one-word answers
+❌ "Which of the following is a characteristics of..." (only list questions)
+❌ Questions copied directly from textbook without modification
+
+REQUIRED ELEMENTS FOR EACH QUESTION:
+✓ Specific, clear problem statement (no ambiguity)
+✓ Sufficient data/information provided (no missing values)
+✓ Real numbers not symbolic (for numerical subjects)
+✓ Clear expected output (what needs to be found/shown)
+✓ For solutions: Full step-by-step working, intermediate calculations shown
+✓ For MCQs: Plausible distractors (not obviously wrong)
+✓ Realistic and practical context where applicable
+
+CRITICAL PRINCIPLE #4: SOLUTION QUALITY (MANDATORY FOR ALL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ EVERY question must have a complete solution
+✓ Solutions must show ALL steps and working (not just final answer)
+✓ For numerical: Show formulas, substitutions, calculations
+✓ For descriptive: Provide detailed explanation with proper reasoning
+✓ For proofs: Show logical steps, state theorems/principles used
+✓ Solutions must be wrapped: % START SOLUTION ... % END SOLUTION
+✓ Wrap in proper LaTeX: $$...$$ or \\[...\\]
+
+═══════════════════════════════════════════════════════════════════════════════════════
+`;
+
+  const universalQualityDirective = enhancedUniversalDirective;
 
   const prompt = patternText
     ? `You are an expert ${subject} educator and professional LaTeX exam paper creator.
@@ -806,147 +866,169 @@ async function generateQuestionsWithGemini(
   const subjectSpecificGuidelines = {
     mathematics: `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 MATHEMATICS - SMART QUESTION GENERATION GUIDELINES
+🎯 MATHEMATICS - EXAM-FOCUSED QUESTION GENERATION GUIDELINES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. TOPIC COVERAGE - EQUAL WEIGHTAGE:
-   - Analyze ALL topics/chapters in the provided content
-   - Distribute questions EQUALLY across ALL topics (if 4 topics, ~25% questions per topic)
-   - Don't skip any topic, even if briefly covered in the content
-   - Example: If content covers Algebra, Calculus, Geometry, Statistics - ensure equal representation
+1. DIFFICULTY FOCUS (IMPORTANT TOPICS FROM EXAM PAPERS):
+   ⭐ PRIORITY: Generate questions on topics that frequently appear in board/competitive exams
+   ⭐ High-weightage topics: Ensure at least 40% of questions from these
+   ⭐ Application problems: Minimum 20% of questions
+   ⭐ Proof/derivation questions: At least 15%
 
-2. QUESTION TYPE DISTRIBUTION:
-   - 40% Numerical/Computational problems (calculations, solving equations, finding values)
-   - 30% Conceptual understanding (proofs, derivations, explanations)
-   - 20% Application-based (word problems, real-world scenarios)
-   - 10% Theorem/Formula based (state and prove, verify formulas)
+2. TOPIC COVERAGE - EQUAL WEIGHTAGE:
+   - Analyze ALL chapters/units in the provided content
+   - Distribute questions EQUALLY across ALL chapters
+   - Each chapter gets approximately (Total Questions ÷ Number of Chapters)
+   - Never skip any chapter, even if briefly covered
 
-3. NUMERICAL QUESTIONS - MUST INCLUDE:
-   - Actual calculations with numbers (NOT just symbolic)
-   - Step-by-step arithmetic/algebraic solutions
-   - Clear numerical answers (e.g., "Find the value of x" should give x = 5.2, not just x)
-   - Mix of integers, decimals, fractions based on difficulty
-   - Include units where applicable (meters, seconds, dollars, etc.)
+3. QUESTION DIFFICULTY APPROPRIATE TO LEVEL:
+   - Include challenging multi-step problems requiring multiple concepts
+   - Avoid trivial single-formula application
+   - At least 30% should be "hard" or "very hard" level
+   - Progressively more challenging as questions increase
 
-4. DIFFICULTY PROGRESSION:
-   - Easy (30%): Direct formula application, basic computations
-   - Medium (50%): Multi-step problems, requires concept understanding
-   - Hard (20%): Involves multiple concepts, creative thinking
+4. NUMERICAL QUESTIONS (MANDATORY ELEMENT):
+   - Minimum 50% of questions must include actual numbers/calculations
+   - Use realistic values relevant to real-world contexts
+   - Step-by-step working with intermediate calculations
+   - Clear numerical answers with appropriate precision
 
-5. SMART QUESTION CHARACTERISTICS:
-   - Clear, unambiguous problem statements
-   - Sufficient data provided (not missing information)
-   - Realistic numbers (avoid extremely large or complex values for basic level)
-   - Questions should test understanding, not just memorization
-   - Include diagrams where helpful (mention "diagram not shown" if complex)
+5. EXAM-STANDARD QUESTION TYPES:
+   ✓ Multi-step numerical problems
+   ✓ Proofs of theorems or identities
+   ✓ Derivations of formulas
+   ✓ Application-based word problems requiring modeling
+   ✓ Problems requiring multiple concepts (NOT single concept)
 
-EXAMPLE QUESTION QUALITY:
-❌ BAD: "Solve the equation." (Too vague)
-✅ GOOD: "Solve for x: $3x + 7 = 22$. Show all steps."
-
-❌ BAD: "Find the derivative." (Which function?)
-✅ GOOD: "Find $\\frac{d}{dx}(x^3 + 2x^2 - 5x + 1)$ and evaluate at $x = 2$."
+EXAMPLES OF EXAM-STANDARD QUESTIONS:
+✅ "Solve the quadratic equation $2x^2 - 7x + 3 = 0$ and verify your solution."
+✅ "Find the sum of the series $2 + 4 + 8 + ... + 256$. Also find the general term."
+✅ "A rectangular plot has perimeter 60m. If length is 6m more than width, find area. Also find length of diagonal."
+✅ "Prove that $\\sin^2A + \\cos^2A = 1$ using the Pythagorean theorem."
+✅ "Find $\\lim_{x\\to 2} \\frac{x^3 - 8}{x^2 - 4}$ and explain your method."
 `,
     physics: `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚛️ PHYSICS - SMART QUESTION GENERATION GUIDELINES
+⚛️ PHYSICS - EXAM-FOCUSED QUESTION GENERATION GUIDELINES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. TOPIC COVERAGE:
-   - Equal representation from all chapters (Mechanics, Thermodynamics, Optics, etc.)
-   - Cover both theory and numerical problems
+1. EQUAL CHAPTER DISTRIBUTION:
+   - Cover all chapters equally (Mechanics, Thermodynamics, Optics, etc.)
+   - Each chapter should have proportional questions
    
-2. QUESTION DISTRIBUTION:
-   - 50% Numerical problems with calculations
-   - 25% Derivations and proofs
-   - 15% Conceptual/Theory questions
+2. FOCUS ON EXAM-IMPORTANT TOPICS:
+   - 50%+ Numerical problems with REAL values and SI units
+   - 25% Derivations and theoretical proofs
+   - 15% Conceptual/Analysis questions
    - 10% Diagram-based or experimental questions
 
-3. NUMERICAL PROBLEMS - REQUIREMENTS:
+3. NUMERICAL PROBLEMS (CRITICAL):
    - Realistic values with proper SI units
-   - Clear given data and what to find
-   - Step-by-step solution with formula application
-   - Final answer with correct units and significant figures
+   - Multi-step calculation required (not one-line answers)
+   - Include intermediate calculations and formulas
+   - Final answer with correct significant figures and units
+   - Problems combining 2-3 concepts, not just single formula
 
-4. TOPIC BALANCE:
-   - If content covers 5 topics, aim for 20% questions per topic
-   - Don't overemphasize one topic
+4. CHALLENGING PROBLEM CHARACTERISTICS:
+   - Requires understanding of physical principles
+   - Not just direct formula substitution
+   - Real-world contexts
+   - At least 30% should require multiple steps or combined concepts
 
-EXAMPLE:
-✅ GOOD: "A car accelerates from rest to 20 m/s in 5 seconds. Calculate: (a) acceleration (b) distance traveled. Use $v = u + at$ and $s = ut + \\frac{1}{2}at^2$."
+5. EXAM-STANDARD EXAMPLES:
+   ✅ "A projectile is launched at 45° with initial velocity 20 m/s. Calculate max height, range, and time of flight. (g=10 m/s²)"
+   ✅ "A hot water sphere cools from 80°C to 30°C in 10 minutes. Using Newton's law of cooling (T=T₀ + (T₁-T₀)e^(-kt)), find the temperature after 5 more minutes."
+   ✅ "An object with specific heat 400 J/kg°C gains 24000 J energy. Its mass is 5 kg. Find temperature change and final temperature if initial is 20°C."
 `,
     chemistry: `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🧪 CHEMISTRY - SMART QUESTION GENERATION GUIDELINES
+🧪 CHEMISTRY - EXAM-FOCUSED QUESTION GENERATION GUIDELINES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. BALANCED COVERAGE:
+1. EQUAL CHAPTER DISTRIBUTION:
    - Organic, Inorganic, Physical Chemistry - equal weightage
-   - Both theoretical and numerical questions
+   - Cover all chapters/units equally
+   
+2. EXAM-FOCUSED DISTRIBUTION:
+   - 40% Numerical calculations (stoichiometry, molarity, pH, redox, equilibrium)
+   - 30% Reactions, balancing equations, mechanisms  
+   - 20% Structure, naming, properties
+   - 10% Experimental procedures and analysis
 
-2. QUESTION TYPES:
-   - 40% Numerical (stoichiometry, molarity, pH calculations)
-   - 30% Reactions and equations
-   - 20% Naming, structures, properties
-   - 10% Experimental procedures
-
-3. NUMERICAL PRECISION:
-   - Use molar masses, Avogadro's number accurately
+3. NUMERICAL PRECISION (MANDATORY):
+   - Accurate molar masses and Avogadro's number
    - Show dimensional analysis
-   - Proper chemical formulas and equations
+   - Step-by-step calculations with units
+   - Real-world chemical quantities
+
+4. CHALLENGING PROBLEM FOCUS:
+   - Multi-step stoichiometry problems
+   - Problems requiring concept combination
+   - NOT simple one-step calculations
+   - Include limiting reagent concepts where applicable
+
+5. EXAM-STANDARD EXAMPLES:
+   ✅ "25 mL of 0.2M HCl is titrated with NaOH solution. 20 mL of NaOH is required for complete neutralization. Calculate molarity of NaOH and mass of NaOH in the flask."
+   ✅ "For the reaction 2A + 3B → 4C, starting with 5 mol A and 8 mol B, identify limiting reagent and calculate: (i) moles of C formed (ii) moles of B remaining"
 `,
     biology: `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🧬 BIOLOGY - SMART QUESTION GENERATION GUIDELINES
+🧬 BIOLOGY - EXAM-FOCUSED QUESTION GENERATION GUIDELINES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. EQUAL TOPIC DISTRIBUTION:
-   - Cover all units equally (Cell Biology, Genetics, Ecology, etc.)
+1. EQUAL CHAPTER DISTRIBUTION:
+   - Cover all chapters/units equally (Cell Biology, Genetics, Ecology, Botany, Zoology)
+   - Each chapter gets proportional questions
+   - No chapter left behind
 
-2. QUESTION STYLE:
-   - 50% Descriptive (explain, describe, differentiate)
-   - 25% Diagram-based (label, draw, identify)
-   - 15% Application (case studies, scenarios)
-   - 10% Numerical (genetics ratios, population calculations)
+2. EXAM-FOCUSED QUESTION DISTRIBUTION:
+   - 40% Analytical/Application (case studies, explain mechanisms, predict outcomes)
+   - 25% Diagram-based (draw structures, label parts, trace processes)
+   - 20% Descriptive (explain processes, compare, differentiate)
+   - 10% Numerical (genetics ratios, population ecology calculations)
+   - 5% Direct definition (only as sub-parts, not standalone)
 
-3. QUALITY MARKERS:
-   - Use proper scientific terminology
-   - Include specific examples from nature
-   - Avoid yes/no questions, prefer "explain why"
+3. CHALLENGING QUESTION CHARACTERISTICS:
+   - Multi-step reasoning required
+   - Combines multiple concepts
+   - Requires critical thinking, not just memorization
+   - Real-world biological scenarios
+   - NOT simple "define" or "list" questions
+
+4. EXAM-STANDARD EXAMPLES:
+   ✅ "A cross between Tt (tall) and tt (short) pea plants produces F1 offspring. Among 100 F1 plants, 48 are tall. Explain why. What is the genotype ratio?"
+   ✅ "Compare mitosis and meiosis with respect to genetic variation, chromosome number change, and biological significance."
+   ✅ "In an ecosystem with 10,000 J energy at grass level, only 100 J reaches carnivores. Explain with the concept of energy transfer."
 `,
     history: `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📜 HISTORY - SMART QUESTION GENERATION GUIDELINES
+📜 HISTORY - EXAM-FOCUSED QUESTION GENERATION GUIDELINES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. TIME PERIOD BALANCE:
-   - Equal coverage across all time periods mentioned in content
-   - Ancient, Medieval, Modern - balanced representation
+1. CHRONOLOGICAL & THEMATIC BALANCE:
+   - Equal coverage across all time periods (Ancient, Medieval, Modern)
+   - Cover all major themes/units equally
+   - No period or unit neglected
 
-2. QUESTION TYPES FOR HISTORY:
-   - 40% Analytical (causes, effects, significance, analyze)
-   - 30% Descriptive (describe events, movements, personalities)
-   - 20% Chronological (timelines, sequence of events, dates)
-   - 10% Comparative (compare two periods, leaders, movements)
+2. EXAM-FOCUSED DISTRIBUTION:
+   - 45% Analytical/Cause-Effect (analyze factors, consequences, significance)
+   - 25% Comparative (compare movements, leaders, policies, impacts)
+   - 15% Descriptive (describe events with specificity, NOT just dates/names)
+   - 10% Factual/Chronological (dates, sequences combined with analysis)
+   - 5% Source-based (analyze documents, speeches)
 
-3. PROPER HISTORICAL QUESTIONS:
-   - Include specific dates, names, places
-   - Ask "Why" and "How" not just "What"
-   - Questions should test understanding of causation
-   - Include primary source analysis where applicable
+3. CHALLENGING CHARACTERISTICS:
+   - Requires critical analysis, NOT memorization
+   - Multi-part questions testing different aspects
+   - Connects historical events to their impacts
+   - NOT single-word answers
+   - Demands historical reasoning
 
-4. AVOID:
-   - Generic "what happened" questions
-   - Questions answerable in one word
-   - Obscure trivial details
-
-EXAMPLES:
-❌ BAD: "Who was the first president?"
-✅ GOOD: "Analyze the factors that led to [specific event] in [year]. How did this impact [region/people]?"
-
-✅ GOOD: "Compare the economic policies of [Leader A] and [Leader B]. What were the key differences and their impacts on society?"
-
-✅ GOOD: "Explain the significance of [Historical Event] in the context of [Time Period]. How did it change the course of history?"
+4. EXAM-STANDARD EXAMPLES:
+   ✅ "Analyze the economic and political factors that led to French Revolution. How did these factors specifically contribute to the overthrow of monarchy?"
+   ✅ "Compare the independence movements of India and South Africa: (a) Methods used (b) Key leaders (c) International support received (d) Post-independence challenges"
+   ✅ "How did the Treaty of Versailles contribute to the rise of fascism in Germany? Explain with specific examples."
+   ❌ AVOID: "In which year did X happen?" or "Who was X?"
 `,
     'computer-science': `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

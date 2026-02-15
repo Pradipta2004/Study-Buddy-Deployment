@@ -1,0 +1,423 @@
+[33mcommit 438253e2f182abba154f26c0db0f413deb3f3805[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sun Feb 15 05:32:26 2026 +0000
+
+    hovering removed , dropdown added in class selection
+
+[33mcommit 6b38f2a35f028021a5ba24cb7cd4e69ef96ae4b7[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sat Feb 14 19:55:44 2026 +0000
+
+    some fix of texbok done
+
+[33mcommit 1dcccec1cd2da76d0cdc1b488c3068d59bcb4e8d[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sat Feb 14 19:17:22 2026 +0000
+
+    customisation added
+
+[33mcommit c24ceccc6b72d399bc130b1280aad72244d295c5[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sat Feb 14 06:16:45 2026 +0000
+
+    latest-ui-redesign-done
+
+[33mcommit 51eee5e50f567cf4033f36ca5bf2eae2173694b0[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Fri Feb 13 11:47:19 2026 +0000
+
+     equal distribution mentioned in system prompt : implemented, see upload.ts find for MAX_CONTENT_CHARS , change to get more
+
+[33mcommit 337490f32fbbb01bac76da94abcb4ed22fb97ccf[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Fri Feb 13 08:21:31 2026 +0000
+
+    subject : other added , alert sound enablesd
+
+[33mcommit c353f52021fec0e5526aad880d31241632a292ca[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Fri Feb 13 07:52:39 2026 +0000
+
+    QuestionCustomizer Changed : Auto-Fill for question configuration
+
+[33mcommit fbefa53762da9ddce346cabe0edd5324db0cb6ce[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Thu Feb 12 07:00:23 2026 +0000
+
+    google-analytics-added
+
+[33mcommit 8bfd4fce246e1440069af29f751a0a22c412bc4a[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Wed Feb 11 19:26:27 2026 +0000
+
+    Show AI token usage stats after question generation
+    
+    - Capture prompt/output/total tokens from all Gemini API calls
+    - Display input, output, and total token counts on the success screen
+    - Expandable breakdown showing tokens per step (extraction, pattern analysis, generation)
+
+[33mcommit 0467b730d1dc9b4f9fa50e375a8e50c4d3db728a[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Wed Feb 11 18:45:24 2026 +0000
+
+    Add feedback popup form with MongoDB integration
+    
+    - Add landing page popup with name, class, subject dropdowns and suggestions field
+    - Create /api/feedback endpoint to save submissions to MongoDB
+    - Add MongoDB connection utility (lib/mongodb.ts)
+    - Data stored in studybuddy.feedbacks collection
+
+[33mcommit 35727fb172770553e873919888f95b71733cbcd4[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Wed Feb 11 11:00:57 2026 +0000
+
+    max limit, quote , subjects re-organised
+
+[33mcommit c91917598116e6d40393a389a90dc13fd674e8af[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Tue Feb 10 19:36:03 2026 +0000
+
+    Enforce per-question type matching in pattern-based generation
+    
+    - extractPatternStructure now captures QUESTION-BY-QUESTION BREAKDOWN with
+      each question/sub-part's specific type (MCQ, True/False, Column-Matching, etc.)
+    - Generation prompt adds CRITICAL rule: each generated question must match the
+      exact type of the corresponding pattern question at the same position
+    - Added formatting rules for True/False, Assertion-Reason, and Numerical types
+
+[33mcommit 7bae991d4a580e94d840f8d74599baa35c716ade[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Tue Feb 10 19:16:33 2026 +0000
+
+    feat: add Column Matching question type + fix table rendering in PDF
+    
+    - Add 'Column Matching' to 1-mark question types (UI + prompt + interface)
+    - Fix sanitizeLatex escaping & inside tabular/longtable/array environments
+      which broke table column separators in generated PDFs
+    - Protect table environments before special char escaping, restore after
+
+[33mcommit a66a5a7cba37b66b5cd9f780f0a6944eeae3b4cd[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Tue Feb 10 18:05:11 2026 +0000
+
+    fix: pattern-based question generation reliability
+    
+    - Add retry with exponential backoff for Gemini API calls
+    - Run content + pattern PDF extraction in parallel
+    - New extractPatternStructure() for structured pattern analysis
+      instead of raw text dump (smaller, more useful for generation)
+    - Add delay between extraction and generation to avoid rate limits
+    - Optimize prompt: cleaner pattern mode instructions, smaller payload
+    - Better client-side error messages for 429/504 responses
+
+[33mcommit fbd57e0095d5e931a543c1b637f68a03c0617cef[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sun Feb 8 11:06:00 2026 +0000
+
+    env reseet
+
+[33mcommit 6a00e2407349c25b141b1e819ac65f55668886da[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sun Feb 8 09:55:53 2026 +0530
+
+    Delete .env.example
+
+[33mcommit 6eda9b25d3cffa21f08ad511f42a81a927b0830f[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sun Feb 8 09:55:30 2026 +0530
+
+    Delete .env
+    
+    deleted env
+
+[33mcommit 4049977c4600a60b0bce8d595ed0bb8342b9c7be[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sat Feb 7 06:51:08 2026 +0000
+
+    Set up Render deployment-restore fs
+
+[33mcommit 9d697004558e08c370027820b31e6abc446a3b66[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sat Feb 7 06:18:09 2026 +0000
+
+    Set up Render deployment
+
+[33mcommit 65bad10db84623aa70aeb6b008f918da318a9929[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Fri Feb 6 11:01:50 2026 +0000
+
+    apk-publish-ready=2
+
+[33mcommit 8cebcbd6b0091f21b213830c0bade06e1290ff2e[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Fri Feb 6 10:57:56 2026 +0000
+
+    Trigger Vercel deployment - v1.0.1
+
+[33mcommit 34bc4d477e2c4be16408e0760ac5fcd3a60ec6ea[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Fri Feb 6 10:56:20 2026 +0000
+
+    apk-publish-ready
+
+[33mcommit 146dd8c942bb88213f47a423e0ff5eb309301e24[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Fri Feb 6 10:51:58 2026 +0000
+
+    Fix typo: 'Downloadd' -> 'Download' and add zip files to gitignore
+
+[33mcommit 489596dde3f1541484822b96b2e1696078e63558[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Fri Feb 6 10:16:29 2026 +0000
+
+    download-feature-fixed
+
+[33mcommit 33961206effc3606631847410298f38c3397b1bd[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Tue Feb 3 18:38:42 2026 +0000
+
+    Increase PDF extraction timeout to 2 minutes and add better logging
+
+[33mcommit 159aa830d026668c87819bb82f8c87524af06c2a[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Tue Feb 3 18:35:50 2026 +0000
+
+    Optimize for Netlify serverless: reduce timeouts and content limits to prevent 504 errors
+
+[33mcommit 17731c056fe6dbba0015cc2db4365cffabd4db85[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Tue Feb 3 18:29:05 2026 +0000
+
+    Standardize to gemini-2.0-flash for all operations
+
+[33mcommit 03a9c152e905519e6d83b2b0bea1744ae6305b1e[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Tue Feb 3 18:27:05 2026 +0000
+
+    deployed-2
+
+[33mcommit bccdbe59d3a0d88cb14e440c948fbe4917415f8f[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Tue Feb 3 18:21:20 2026 +0000
+
+    Replace pdf-parse with Gemini API for serverless PDF extraction
+
+[33mcommit 2d4d623c8b1879359eb3a7b88eaf96d5ae33749c[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Tue Feb 3 18:17:39 2026 +0000
+
+    deployed
+
+[33mcommit 197f8b3211f2d25eb9f9da6bddd0ae7a854d3822[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Tue Feb 3 18:02:13 2026 +0000
+
+    Add Netlify configuration
+
+[33mcommit c00ccb1bddbe4d8b229fd71051f33024f8d866cf[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Tue Feb 3 18:00:56 2026 +0000
+
+    latex-compatible-api-added
+
+[33mcommit 0ae64d30fdfe238fe6c957155f44e0d02839cdaf[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Tue Feb 3 08:40:10 2026 +0000
+
+    Vercel temp storage fixes
+
+[33mcommit 4faeac007141b6e5f0c6ccefd05913f0895ccdfd[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Tue Feb 3 08:36:09 2026 +0000
+
+    fantastic to deploy
+
+[33mcommit 6782d2e8a4573716d51483dfee3c19519795cb0d[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Mon Feb 2 19:28:02 2026 +0000
+
+    Fix pattern PDF artifacts and large-PDF handling
+    
+    - Preserve LaTeX % comments during PDF generation (avoid printing template notes)
+    - Strip comment lines in web preview
+    - Improve large PDF + pattern prompt sizing/truncation
+
+[33mcommit 67cc6389691011ec137386d51780f3dd1ec96f9a[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Mon Feb 2 17:46:37 2026 +0000
+
+    Fix file upload limits and PDF parsing issues
+    
+    - Increased upload file size limit to 64MB per file (128MB total)
+    - Fixed PDF text extraction using correct pdf-parse v2 API
+    - Added robust error handling and timeouts for PDF processing
+    - Improved UI error messages for uploads
+
+[33mcommit 9bd88e15ab07dae159f6e8944fd73eb79c4d9db5[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sun Feb 1 07:14:02 2026 +0000
+
+    ui-redesign-overflow-handled-latest:all ok
+
+[33mcommit f3157889a8ba4c5ac4418d21599ed17521d3120e[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sun Feb 1 06:39:55 2026 +0000
+
+    question-grouping-done:all-ok
+
+[33mcommit 3fc197a78a9bff410764e9cad8e9e0f9b2e431f1[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sun Feb 1 06:17:47 2026 +0000
+
+    subject-grouping-done:all-ok
+
+[33mcommit e0dec2b39f633867e4edd89d7311b83f09562aac[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sun Feb 1 05:40:17 2026 +0000
+
+    grouping-of-class-done:all-ok
+
+[33mcommit 85c68daf9ad89eff7f24e2fae52ee69c23f37bde[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sun Feb 1 04:55:56 2026 +0000
+
+    complete-solution-window-fixed:all-ok:1-2
+
+[33mcommit 28391108c237731fc46b16f058951095db068c47[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Thu Jan 29 15:40:10 2026 +0000
+
+    black editz
+
+[33mcommit bd66121d4caed717592ef52ac2a5d9cf54fca4d8[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Thu Jan 29 14:23:12 2026 +0000
+
+    Texts have been edited
+
+[33mcommit 01eff768643134d767a39fd7f36347c298995e97[m
+Author: Pradipta2004 <145521722+Pradipta2004@users.noreply.github.com>
+Date:   Sun Jan 25 16:42:00 2026 +0000
+
+    ui redesigned
+
+[33mcommit 697d2c780da3e4ed465221cf0fb5d0ff1fe22a3e[m
+Author: Atanu Ghosh <129794538+atanu0909@users.noreply.github.com>
+Date:   Tue Jan 20 11:55:41 2026 +0000
+
+    Fix fill-in-the-blank underline rendering in web preview with better visibility and debugging
+
+[33mcommit c372e4d9d43a03331223d94c6e92db3297761807[m
+Author: Atanu Ghosh <129794538+atanu0909@users.noreply.github.com>
+Date:   Tue Jan 20 11:43:22 2026 +0000
+
+    Update PDF download filename to studdybuddy_subjectname_class_date format
+
+[33mcommit 4834b6530790657d73cc4229cf00cab49c7a58c3[m
+Author: Atanu Ghosh <129794538+atanu0909@users.noreply.github.com>
+Date:   Fri Jan 16 17:12:29 2026 +0000
+
+    Remove question types section and convert difficulty level to dropdown
+
+[33mcommit 7fc7e386a3fee4bc28fa1aa50d6e21276e37762b[m
+Author: Atanu Ghosh <129794538+atanu0909@users.noreply.github.com>
+Date:   Fri Jan 16 16:52:45 2026 +0000
+
+    Install LaTeX packages for PDF generation support
+
+[33mcommit 4bcd0d46a9bf0611fb8c6dc01f30841b5e12add8[m
+Author: Atanu Ghosh <129794538+atanu0909@users.noreply.github.com>
+Date:   Fri Jan 16 16:12:53 2026 +0000
+
+    Add comprehensive subject support with smart question generation
+    
+    - Added 14 new subjects: English, Hindi, Social Science, History, Geography, Political Science, Accountancy, Business Studies, Psychology, Sociology, Philosophy, Environmental Science, Sanskrit, General Science
+    - Each subject has tailored question generation guidelines
+    - Subject-specific question distribution and quality markers
+    - Ensures smart, balanced question generation for all standard subjects
+    - Supports both STEM and Humanities subjects with appropriate question types
+
+[33mcommit 95a28c4352490b76fbfeef6b4a08ebeccf3b9e63[m
+Author: Atanu Ghosh <129794538+atanu0909@users.noreply.github.com>
+Date:   Fri Jan 16 16:04:25 2026 +0000
+
+    Add pattern-based question generation and PDF compilation improvements
+    
+    - Hide question preview when pattern is uploaded (show only download options)
+    - Add pdflatex availability check before PDF generation
+    - Track pattern-based generation with isFromPattern state
+    - Improve user experience with clear messaging for pattern-based questions
+
+[33mcommit c1e062f6bd60aff9ff23e3f60d97d0e15903bb19[m
+Author: atanu ghosh <atanughosh323@gmail.com>
+Date:   Fri Jan 16 11:20:52 2026 +0530
+
+    chore: sync local changes
+
+[33mcommit 06f96207b4a8d21aaaee04d23e06cc2f0c993cd0[m
+Author: Atanu Ghosh <129794538+atanu0909@users.noreply.github.com>
+Date:   Thu Jan 15 10:11:40 2026 +0000
+
+    Enhance LaTeX parser to support pattern-generated question formats
+    
+    - Add more flexible regex patterns for question detection
+    - Support various numbering formats (Q.N, Q N, N., etc.)
+    - Better section detection after header tables
+    - More lenient content filtering
+    - Improved logging for debugging
+    - Handle custom pattern formats that may not have standard markers
+
+[33mcommit 7000e9d97a9c52f4288cb9e249ad7afbf5634fb5[m
+Author: Atanu Ghosh <129794538+atanu0909@users.noreply.github.com>
+Date:   Thu Jan 15 06:58:19 2026 +0000
+
+    pdf comes right but in website it is latex when we upload pattern
+
+[33mcommit ca772593bd7206ef6ce68bdf3a7db9ca7807a50d[m
+Author: Atanu Ghosh <129794538+atanu0909@users.noreply.github.com>
+Date:   Thu Jan 15 07:00:34 2026 +0000
+
+    wrong-pattern-in-web
+
+[33mcommit c547c6508e96aaf7847d2608526df35432b32d8c[m
+Author: Atanu Ghosh <129794538+atanu0909@users.noreply.github.com>
+Date:   Thu Jan 15 05:55:52 2026 +0000
+
+    Website pattern wrong but pdf perfect limit error in last kind qs
+
+[33mcommit 7a11e5e5609823ab59cb70849a06d70a0aa9475f[m
+Author: Atanu Ghosh <129794538+atanu0909@users.noreply.github.com>
+Date:   Tue Jan 13 06:25:46 2026 +0000
+
+    ✨ Add question paper pattern upload feature
+    
+    - Users can now upload a sample question paper pattern (optional)
+    - AI analyzes the pattern's structure, format, and style
+    - Generated questions match the uploaded pattern exactly
+    - Pattern analysis includes layout, numbering, sections, and formatting
+    - Updated UI with dedicated pattern upload section
+    - Enhanced API to process both textbook and pattern files
+    - Automatic cleanup of uploaded files after processing
+
+[33mcommit 8e77f6526a6f82332a7fc50c420fb8a51c87633c[m
+Author: Atanu Ghosh <129794538+atanu0909@users.noreply.github.com>
+Date:   Tue Jan 13 06:14:57 2026 +0000
+
+    🎨 Rebrand to STUDYBUDDY with mobile-responsive UI
+    
+    - Rebranded application to STUDYBUDDY (Powered by INFOTECH SERVICES)
+    - Added class selection dropdown (Classes 6-12 + College/University)
+    - Implemented fully mobile-responsive design with Tailwind breakpoints
+    - Updated color scheme from purple to blue/indigo/purple gradient
+    - Enhanced UI with better spacing, animations, and visual feedback
+    - Added responsive header, buttons, and form controls
+    - Improved error messages with icons and better formatting
+    - Added footer with copyright and branding
+    - Optimized for mobile, tablet, and desktop screens
+    - Enhanced accessibility with proper touch targets and font sizing
+
+[33mcommit 8b1a7abc302e68454544b3add424924e43ead078[m
+Author: atanu ghosh <atanughosh323@gmail.com>
+Date:   Tue Jan 13 11:03:49 2026 +0530
+
+    Initial commit: LaTeX interview notes generator

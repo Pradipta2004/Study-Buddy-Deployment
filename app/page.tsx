@@ -667,18 +667,42 @@ export default function Home() {
       <main className="max-w-6xl mx-auto px-4 py-6 md:py-8 space-y-6 md:space-y-8">
         {/* Get Started Screen */}
         {!started ? (
-          <div className="card p-8 md:p-12 text-center space-y-8 animate-fadeIn">
-            <div className="space-y-4">
-              <h2 className="text-3xl md:text-5xl font-bold text-gray-800">Welcome</h2>
-              <p className="text-base md:text-lg text-gray-600">Create Question Paper from your Textbook Instantly</p>
+          <div className="space-y-6 animate-fadeIn">
+            <div className="card p-8 md:p-12 text-center space-y-8">
+              <div className="space-y-4">
+                <h2 className="text-3xl md:text-5xl font-bold text-gray-800">Welcome</h2>
+                <p className="text-base md:text-lg text-gray-600">Create Question Paper from your Textbook Instantly</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  onClick={() => setStarted(true)}
+                  className="bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold py-4 px-8 rounded-xl hover:shadow-lg transition-all transform hover:scale-105 text-lg md:text-xl"
+                >
+                  Get Started →
+                </button>
+              </div>
             </div>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={() => setStarted(true)}
-                className="bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold py-4 px-8 rounded-xl hover:shadow-lg transition-all transform hover:scale-105 text-lg md:text-xl"
-              >
-                Get Started →
-              </button>
+            
+            {/* Feature Highlights Banner */}
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-6 md:p-8 shadow-lg">
+              <h3 className="text-xl md:text-2xl font-bold text-green-800 mb-6 text-center">✨ Study Buddy Features</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white/60 backdrop-blur rounded-lg p-5 border border-green-200">
+                  <div className="text-3xl mb-2">📚</div>
+                  <h4 className="font-bold text-gray-800 mb-2">All Chapters</h4>
+                  <p className="text-sm text-gray-700">Questions generated from <strong>ALL chapters</strong> equally - no chapter left behind!</p>
+                </div>
+                <div className="bg-white/60 backdrop-blur rounded-lg p-5 border border-green-200">
+                  <div className="text-3xl mb-2">🎯</div>
+                  <h4 className="font-bold text-gray-800 mb-2">Exam-Standard</h4>
+                  <p className="text-sm text-gray-700">Challenging questions based on actual <strong>board &amp; competitive exams</strong> - not easy questions!</p>
+                </div>
+                <div className="bg-white/60 backdrop-blur rounded-lg p-5 border border-green-200">
+                  <div className="text-3xl mb-2">✅</div>
+                  <h4 className="font-bold text-gray-800 mb-2">Full Solutions</h4>
+                  <p className="text-sm text-gray-700"><strong>Complete step-by-step solutions</strong> with detailed explanations included</p>
+                </div>
+              </div>
             </div>
           </div>
         ) : (

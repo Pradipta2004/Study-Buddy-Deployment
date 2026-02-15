@@ -506,6 +506,16 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
               </div>
             </div>
           </button>
+          
+          {/* Info Banner - Highlight Key Features */}
+          <div className="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-lg mt-4 space-y-2">
+            <p className="text-xs font-bold text-amber-900">💡 Default Behavior:</p>
+            <ul className="text-xs text-amber-800 space-y-1">
+              <li className="flex gap-2"><span>✓</span> <span>Questions generated from <strong>ALL chapters</strong> equally</span></li>
+              <li className="flex gap-2"><span>✓</span> <span>Focuses on <strong>challenging, exam-standard</strong> questions</span></li>
+              <li className="flex gap-2"><span>✓</span> <span>Includes <strong>complete step-by-step solutions</strong></span></li>
+            </ul>
+          </div>
         </div>
       </div>
     );
@@ -866,7 +876,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
     };
 
     return (
-      <div className="animate-fadeIn">
+      <div className="animate-fadeIn space-y-4">
         <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200 text-center space-y-2">
           <p className="text-sm font-bold text-green-700">✓ Ready</p>
           <div className="text-xs space-y-1 text-gray-700">
@@ -891,6 +901,17 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
           >
             Change
           </button>
+        </div>
+        
+        {/* Final Reminder Banner */}
+        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-bold text-blue-800">🎯 What You'll Get:</p>
+          <ul className="text-xs text-blue-700 space-y-1">
+            <li className="flex gap-2"><span>📚</span> <span>Questions from <strong>ALL chapters</strong> - comprehensive coverage</span></li>
+            <li className="flex gap-2"><span>💪</span> <span><strong>Challenging, important questions</strong> - exam-standard level</span></li>
+            <li className="flex gap-2"><span>✅</span> <span><strong>Complete solutions</strong> - step-by-step explanations</span></li>
+            <li className="flex gap-2"><span>📄</span> <span><strong>Ready-to-use PDF</strong> - formatted and printable</span></li>
+          </ul>
         </div>
       </div>
     );
