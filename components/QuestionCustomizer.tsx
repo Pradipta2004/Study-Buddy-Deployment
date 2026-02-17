@@ -309,37 +309,59 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
   };
 
   const renderClassSelector = () => {
+    const currentCategory = 
+      config.studentClass === 'college' 
+        ? 'college' 
+        : ['11', '12'].includes(config.studentClass)
+        ? 'higher-secondary'
+        : 'secondary';
+
     return (
       <div className="animate-fadeIn" ref={dropdownRef}>
         <h3 className="text-lg font-bold text-gray-800 mb-4">Select Class Level</h3>
         <div className="space-y-4">
-          {/* Category Selection */}
+          {/* Category Selection - Button Style */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Choose Category</label>
-            <select
-              value={
-                config.studentClass === 'college' 
-                  ? 'college' 
-                  : ['11', '12'].includes(config.studentClass)
-                  ? 'higher-secondary'
-                  : 'secondary'
-              }
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === 'college') {
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                onClick={() => {
+                  setHoveredCategory('secondary');
+                }}
+                className={`w-full p-3 rounded-lg font-semibold text-sm transition-all text-left ${
+                  currentCategory === 'secondary' && !hoveredCategory
+                    ? 'border-2 border-blue-600 bg-blue-50'
+                    : hoveredCategory === 'secondary'
+                    ? 'border-2 border-blue-600 bg-blue-50'
+                    : 'border-2 border-gray-300 hover:border-blue-400'
+                }`}
+              >
+                📚 Secondary (Class 4-10)
+              </button>
+              <button
+                onClick={() => {
+                  setHoveredCategory('higher-secondary');
+                }}
+                className={`w-full p-3 rounded-lg font-semibold text-sm transition-all text-left ${
+                  currentCategory === 'higher-secondary' && !hoveredCategory
+                    ? 'border-2 border-blue-600 bg-blue-50'
+                    : hoveredCategory === 'higher-secondary'
+                    ? 'border-2 border-blue-600 bg-blue-50'
+                    : 'border-2 border-gray-300 hover:border-blue-400'
+                }`}
+              >
+                🎓 Higher Secondary (Class 11-12)
+              </button>
+              <button
+                onClick={() => {
                   onConfigChange({ ...config, studentClass: 'college' });
                   goToStep('subject');
-                } else {
-                  setHoveredCategory(value);
-                }
-              }}
-              className="w-full p-3 border-2 border-blue-300 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-600 appearance-none cursor-pointer bg-white"
-            >
-              <option value="">Select a category</option>
-              <option value="secondary">📚 Secondary (Class 4-10)</option>
-              <option value="higher-secondary">🎓 Higher Secondary (Class 11-12)</option>
-              <option value="college">🏛️ College/University</option>
-            </select>
+                }}
+                className="w-full p-3 rounded-lg font-semibold text-sm transition-all text-left border-2 border-green-400 hover:border-green-600 hover:bg-green-50"
+              >
+                🏛️ College/University
+              </button>
+            </div>
           </div>
 
           {/* Class Selection (when secondary or higher-secondary is selected) */}
@@ -350,6 +372,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
                 value={config.studentClass}
                 onChange={(e) => {
                   onConfigChange({ ...config, studentClass: e.target.value });
+                  setHoveredCategory(null);
                   goToStep('subject');
                 }}
                 className="w-full p-3 border-2 border-blue-300 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-600 appearance-none cursor-pointer bg-white"

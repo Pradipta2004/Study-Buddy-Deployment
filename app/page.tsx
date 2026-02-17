@@ -381,6 +381,28 @@ export default function Home() {
     }, 500);
 
     try {
+      // Store user choices in MongoDB
+      try {
+        await fetch('/api/store-user-choices', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            studentClass: config.studentClass,
+            subject: config.subject,
+            difficulty: config.difficulty,
+            mode: mode, // ai-magic, pattern, or custom
+            questionsByType: mode !== 'pattern' ? config.questionsByType : undefined,
+            questionsByMarks: mode !== 'pattern' ? config.questionsByMarks : undefined,
+            customInstructions: config.customInstructions || null,
+          }),
+        });
+      } catch (storageError) {
+        // Log but don't fail the generation if storage fails
+        console.warn('Failed to store user choices:', storageError);
+      }
+
       const formData = new FormData();
       formData.append('file', file);
       if (patternFile) {
