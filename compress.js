@@ -11,7 +11,7 @@ const execAsync = promisify(exec);
  * @param {string} outputPath - Path to output compressed PDF file
  * @param {object} options - Compression options
  * @returns {Promise<object>} - Compression results with file sizes
- */
+ */ //hi 
 async function compressPDF(inputPath, outputPath, options = {}) {
   const {
     dpi = 72,              // Lower DPI = smaller file (72 is minimum)
