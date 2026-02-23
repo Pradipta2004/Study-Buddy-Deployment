@@ -46,8 +46,9 @@ function truncateForPrompt(
     return { text, truncated: false, originalLength };
   }
 
-  // Keep both the beginning and end so headings/structure and footer cues survive.
-  const headLen = Math.floor(maxChars * 0.65);
+  // Keep both the beginning and end. Give MORE weight to the end (45%)
+  // because exercise/practice sections are typically at the end of chapters/books.
+  const headLen = Math.floor(maxChars * 0.55);
   const tailLen = maxChars - headLen;
   const head = text.slice(0, headLen);
   const tail = text.slice(-tailLen);
@@ -292,7 +293,18 @@ async function extractTextFromPDF(filePath: string): Promise<ExtractionResult> {
           }
         },
         {
-          text: `Extract all text content from this PDF document. Return ONLY the extracted text without any additional commentary, formatting, or explanations. Preserve the structure and order of the text as it appears in the document.`
+          text: `Extract ALL text content from this PDF document — from the FIRST page to the LAST page, including ALL chapters, units, and sections.
+
+CRITICAL PRIORITY SECTIONS TO EXTRACT (do NOT skip these):
+1. **Exercise / Practice / Solved Examples / Worked Examples sections** at the end of each chapter — these are the MOST IMPORTANT parts. Extract EVERY question from these sections.
+2. **Review Questions / Chapter-end Questions / Miscellaneous Exercises** — extract ALL of these verbatim.
+3. **Important formulas, theorems, derivations, key concepts** from within each chapter.
+4. **Table of Contents / Index** — so chapter structure is clear.
+5. **In-text examples and illustrations** that demonstrate problem-solving.
+
+DO NOT just extract the first few pages and stop. Read the ENTIRE PDF from cover to cover.
+Return ONLY the extracted text without any additional commentary or explanations. Preserve the structure, chapter headings, and order of the text as it appears in the document.
+Mark exercise/practice sections clearly with headers like [EXERCISE - Chapter X] so they are identifiable.`
         }
       ]),
       extractTimeout
@@ -593,38 +605,61 @@ REQUIRED: Cover ALL chapters/topics from the PDF equally.`;
 ║                        ⚠️ HIGHEST PRIORITY - MUST FOLLOW ⚠️                          ║
 ╚════════════════════════════════════════════════════════════════════════════════════════╝
 
-CRITICAL PRINCIPLE #1: CHALLENGING & EXAM-IMPORTANT QUESTIONS ONLY
+CRITICAL PRINCIPLE #1: MODERATE-TO-DIFFICULT, EXAM-IMPORTANT QUESTIONS ONLY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✗ NEVER generate "easy" questions suitable for beginners
+✗ NEVER generate basic/brute-force level questions (e.g., "What is X?", "Define Y")
 ✗ NEVER generate definition-based questions as standalone questions
-✗ NEVER generate trivial "memorization" questions  
-✗ NEVER generate "fill-in-the-blank" with obvious answers
-✓ ONLY generate questions that ACTUALLY APPEAR in board exams, competitive tests, or university exams
-✓ ONLY generate questions requiring ANALYSIS, CALCULATION, REASONING, APPLICATION
+✗ NEVER generate trivial "memorization" or "recall" questions  
+✗ NEVER generate "fill-in-the-blank" with obvious one-word answers
+✗ NEVER ask questions ONLY from the first page or introduction of the textbook
+✗ NEVER generate simple direct-formula-substitution questions
+✓ ONLY generate questions at MODERATE to DIFFICULT level appropriate for secondary (Class 9-10) and higher secondary (Class 11-12) board exams
+✓ ONLY generate questions requiring ANALYSIS, CALCULATION, REASONING, APPLICATION, MULTI-STEP THINKING
 ✓ ONLY generate questions that challenge students and test deep understanding
-✓ ONLY generate questions from EXAM PAPERS and QUESTION BANKS
+✓ ONLY generate questions that are MOST LIKELY to appear in board/competitive exams
+✓ PRIORITIZE questions from EXERCISE/PRACTICE SECTIONS of the textbook (chapter-end exercises, solved examples, miscellaneous exercises)
+✓ Questions should be at a level where students need to THINK and APPLY concepts, not just recall facts
 
 DIFFICULTY DISTRIBUTION (${metadata.difficulty || 'mixed'} level):
-- If EASY: 40% medium, 60% easy
-- If MEDIUM: 20% hard, 60% medium, 20% easy
+- If EASY: 30% medium-easy, 50% medium, 20% moderate-hard
+- If MEDIUM: 15% easy, 50% medium, 35% hard
 - If HARD: 50% hard, 40% medium, 10% easy  
 - If MIXED: 30% hard, 50% medium, 20% easy
 
-CRITICAL PRINCIPLE #2: COMPLETE ALL-CHAPTERS COVERAGE (MANDATORY)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ STEP 1: Identify ALL chapters, units, topics, or sections in the textbook
-✓ STEP 2: Distribute questions EVENLY across ALL identified chapters
-✓ STEP 3: If the book has N chapters → each chapter gets approximately (Total Questions / N) questions
-✓ STEP 4: NO chapter should be left out, not even briefly mentioned chapters
-✓ STEP 5: Include chapter/topic name in EVERY question or as [Chapter X: ...] label
-✓ STEP 6: Verify coverage at the end - list which chapters are covered in each question
+FOR SECONDARY & HIGHER SECONDARY LEVEL:
+- Questions MUST be at board-exam standard (not coaching-worksheet easy level)
+- Include multi-step problems, application-based questions, and higher-order thinking
+- For Math/Science: Minimum 60% numerical/computational problems requiring step-by-step solving
+- For Humanities: Minimum 60% analytical/evaluative questions requiring detailed reasoning
+
+CRITICAL PRINCIPLE #2: COMPLETE ALL-CHAPTERS COVERAGE WITH EQUAL DISTRIBUTION (MANDATORY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ STEP 1: First, read the ENTIRE PDF and identify ALL chapters, units, topics, or sections in the textbook
+✓ STEP 2: Count the total number of chapters (N)
+✓ STEP 3: Calculate questions per chapter = ceil(Total Questions / N)
+✓ STEP 4: Distribute questions STRICTLY EVENLY (±1) across ALL identified chapters
+✓ STEP 5: NO chapter should be left out — not even the last chapter or briefly mentioned chapters
+✓ STEP 6: Include chapter/topic name in EVERY question as [Chapter X: Topic Name] label
+✓ STEP 7: After generating, VERIFY: count questions per chapter and rebalance if any chapter has significantly fewer
+✓ STEP 8: Questions should come from THROUGHOUT each chapter — not just the beginning of the chapter
 
 EXAMPLE: If textbook has 8 chapters and you generate 40 questions:
-- Chapter 1: Questions 1, 6, 11, 16, 21, 26 (5 questions)
-- Chapter 2: Questions 2, 7, 12, 17, 22, 27 (5 questions)
-- [Continue for all 8 chapters...]
+- Chapter 1: 5 questions | Chapter 2: 5 questions | Chapter 3: 5 questions | Chapter 4: 5 questions
+- Chapter 5: 5 questions | Chapter 6: 5 questions | Chapter 7: 5 questions | Chapter 8: 5 questions
 
-CRITICAL PRINCIPLE #3: QUESTION QUALITY STANDARDS (NON-NEGOTIABLE)
+⚠️ DISTRIBUTION VIOLATION CHECK: If any chapter has 0 questions or < (Total/N - 2) questions, you MUST regenerate to fix the imbalance.
+
+CRITICAL PRINCIPLE #3: QUESTION SOURCE — USE EXERCISE/PRACTICE SECTIONS (MANDATORY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✓ PRIORITIZE questions from the EXERCISE/PRACTICE sections at the end of each chapter
+✓ Use SOLVED EXAMPLES and WORKED EXAMPLES from within the chapter as inspiration for similar-level questions
+✓ Include questions from MISCELLANEOUS exercises, ADDITIONAL problems, and REVIEW questions sections
+✓ Do NOT just read the first page/introduction and generate questions from it
+✓ Scan the ENTIRE chapter including end-of-chapter exercises before generating questions
+✓ The most important questions are typically in: Exercise sections → Solved Examples → In-text problems → Theory
+✓ For questions inspired by exercises, modify the numbers/context slightly so they are not exact copies
+
+CRITICAL PRINCIPLE #4: QUESTION QUALITY STANDARDS (NON-NEGOTIABLE)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 BANNED QUESTIONS (AUTO-REJECT IF FOUND):
 ❌ "Define X" as standalone questions
@@ -633,19 +668,23 @@ BANNED QUESTIONS (AUTO-REJECT IF FOUND):
 ❌ "Write the definition of X"
 ❌ "List the characteristics of X" (if only a list, not needing analysis)
 ❌ Basic recall questions with obvious one-word answers
-❌ "Which of the following is a characteristics of..." (only list questions)
-❌ Questions copied directly from textbook without modification
+❌ "Which of the following is a characteristic of..." (only list-based MCQs)
+❌ Questions from ONLY the first page or introduction section
+❌ Trivial fill-in-the-blank with answers directly stated in the chapter
+❌ Single-step, direct formula substitution problems
 
 REQUIRED ELEMENTS FOR EACH QUESTION:
 ✓ Specific, clear problem statement (no ambiguity)
 ✓ Sufficient data/information provided (no missing values)
 ✓ Real numbers not symbolic (for numerical subjects)
 ✓ Clear expected output (what needs to be found/shown)
+✓ Multi-step reasoning or calculation required (not one-liner answers)
 ✓ For solutions: Full step-by-step working, intermediate calculations shown
-✓ For MCQs: Plausible distractors (not obviously wrong)
+✓ For MCQs: Plausible distractors that require actual problem-solving to eliminate
 ✓ Realistic and practical context where applicable
+✓ Questions should test APPLICATION of concepts, not just RECALL
 
-CRITICAL PRINCIPLE #4: SOLUTION QUALITY (MANDATORY FOR ALL)
+CRITICAL PRINCIPLE #5: SOLUTION QUALITY (MANDATORY FOR ALL)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✓ EVERY question must have a complete solution
 ✓ Solutions must show ALL steps and working (not just final answer)
@@ -673,16 +712,23 @@ ${guidelines}
 ${patternText}
 === END OF PATTERN ANALYSIS ===
 
-Read the attached PDF textbook THOROUGHLY — identify ALL chapters, units, and sections. Generate questions covering ALL chapters/topics, distributed as evenly as possible across the entire textbook.${customInstructionsSection}
+Read the attached PDF textbook THOROUGHLY from FIRST page to LAST page — identify ALL chapters, units, and sections. Pay special attention to:
+- EXERCISE/PRACTICE sections at the end of each chapter
+- Solved Examples and Worked Examples within chapters
+- Miscellaneous Exercises and Review Questions
+- Important theorems, derivations, and application problems
+
+Generate questions covering ALL chapters/topics, distributed STRICTLY EVENLY across the entire textbook. Questions should be at MODERATE to DIFFICULT level — the kind that actually appear in board exams and competitive tests, NOT basic recall questions.${customInstructionsSection}
 
 GENERATION RULES:
 1. Create a COMPLETE, compilable LaTeX document (\\documentclass through \\end{document})
 2. QUESTION-BY-QUESTION TYPE MATCHING: For every question in the pattern, generate the SAME type at the SAME position
 3. Match the pattern's structure EXACTLY: sections, question counts, marks distribution
-4. Generate NEW, INNOVATIVE questions from the textbook — do NOT copy pattern questions
-5. Difficulty level: ${difficulty}
-6. **MANDATORY**: Distribute questions across ALL chapters/topics in the textbook. If the textbook has 8 chapters, questions must come from all 8 chapters.
-7. For EVERY question, include a solution wrapped in:
+4. Generate NEW, INNOVATIVE questions INSPIRED BY the exercise/practice sections of the textbook — do NOT copy pattern questions
+5. Difficulty level: ${difficulty} (but NEVER below moderate for secondary/higher-secondary)
+6. **MANDATORY**: Distribute questions EQUALLY across ALL chapters/topics. If the textbook has N chapters, each chapter MUST have approximately (Total Questions / N) questions. No chapter should have 0 questions.
+7. **PRIORITY SOURCE**: Questions should primarily come from exercise sections, solved examples, and important problems — NOT from introductory paragraphs or definitions on the first page.
+8. For EVERY question, include a solution wrapped in:
    % START SOLUTION
    [Step-by-step solution with detailed working]
    % END SOLUTION
@@ -699,13 +745,21 @@ ${universalQualityDirective}
 
 ${guidelines}
 
-Read the attached PDF textbook THOROUGHLY. First, identify ALL chapters, units, and sections in the textbook. Then generate high-quality ${subject} questions covering ALL chapters equally.${questionBreakdown}${customInstructionsSection}
+Read the attached PDF textbook THOROUGHLY from FIRST page to LAST page. 
+
+STEP 1: Identify ALL chapters, units, and sections in the textbook.
+STEP 2: For EACH chapter, read the EXERCISE/PRACTICE section at the end, plus any Solved Examples.
+STEP 3: Generate questions primarily INSPIRED BY the exercises, practice problems, and solved examples from EVERY chapter.
+
+Then generate high-quality ${subject} questions covering ALL chapters with STRICT EQUAL DISTRIBUTION.${questionBreakdown}${customInstructionsSection}
 
 Question Requirements:
 - Question types: ${questionTypeDesc}
-- Difficulty level: ${difficulty}
-- **MANDATORY**: Distribute questions EVENLY across ALL chapters/topics in the PDF. Every chapter must be represented.
-- Each question should be INNOVATIVE and EXAM-STANDARD — not basic recall
+- Difficulty level: ${difficulty} (MINIMUM moderate level for secondary/higher-secondary students)
+- **MANDATORY EQUAL DISTRIBUTION**: If the textbook has N chapters, each chapter MUST have approximately (Total Questions / N) questions. Every single chapter must be represented. Verify this before outputting.
+- **EXERCISE PRIORITY**: At least 70% of questions should be inspired by or similar to exercise/practice section problems. The remaining 30% can come from solved examples and important in-text problems.
+- Each question should be INNOVATIVE, EXAM-STANDARD, and MODERATE-TO-DIFFICULT — not basic recall or first-page definitions
+- Do NOT generate questions only from the beginning of the book — cover ALL chapters including the last ones
 - Provide detailed step-by-step solutions with full working
 
 Format your response ENTIRELY in LaTeX using this structure:
@@ -1393,9 +1447,10 @@ GENERATION RULES:
    - This applies to EVERY question and EVERY sub-part. No exceptions.
 3. Match the pattern's structure EXACTLY: same sections, same number of questions per section, same marks distribution
 4. Replicate the pattern's formatting: same numbering style, same marks display format, same header/instruction layout
-5. Generate NEW questions from the textbook content — do NOT copy the sample questions from the pattern
-6. Match the difficulty level: ${difficulty}
-7. Distribute questions as evenly as possible across all chapters/topics in the textbook content (unless the pattern constraints force a different split)
+5. Generate NEW questions primarily INSPIRED BY exercise/practice sections, solved examples, and important problems from the textbook content — do NOT copy the sample questions from the pattern
+6. Match the difficulty level: ${difficulty} (MINIMUM moderate level for secondary/higher-secondary students — no basic recall questions)
+7. Distribute questions STRICTLY EVENLY across all chapters/topics in the textbook content. If N chapters exist, each chapter gets approximately (Total Questions / N) questions. No chapter should have 0 questions.
+8. **EXERCISE PRIORITY**: At least 70% of questions should be inspired by exercise/practice section problems from the textbook, not introductory text.
 8. For EVERY question, include a solution wrapped in markers:
    % START SOLUTION
    [Step-by-step solution]
@@ -1415,14 +1470,21 @@ IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no explanations
 Content:
 ${pdfText}
 
-Please generate high-quality ${subject} questions based on this content.${questionBreakdown}
+IMPORTANT: Read the ENTIRE content above carefully. Pay special attention to:
+- EXERCISE/PRACTICE sections at the end of each chapter (these are your PRIMARY source for questions)
+- Solved Examples and Worked Examples within each chapter
+- Miscellaneous Exercises and Review Questions
+- Important theorems, derivations, and application problems from ALL chapters
+
+Please generate high-quality, MODERATE-TO-DIFFICULT level ${subject} questions based on this content.${questionBreakdown}
 
 Question Requirements:
 - Question types: ${questionTypeDesc}
-- Difficulty level: ${difficulty}
-- Distribute questions as evenly as possible across all chapters/topics in the content
-- Each question should be clear and well-formatted
-- Provide detailed step-by-step solutions
+- Difficulty level: ${difficulty} (MINIMUM moderate level — questions must require multi-step thinking, analysis, or calculation)
+- **MANDATORY EQUAL DISTRIBUTION**: Distribute questions STRICTLY EVENLY across ALL chapters/topics. If N chapters exist, each chapter gets approximately (Total Questions / N) questions. Every chapter MUST be represented.
+- **EXERCISE PRIORITY**: At least 70% of questions should be inspired by exercise/practice section problems. Do NOT generate questions only from chapter introductions or the first page.
+- Each question should be exam-standard, challenging, and test deep understanding — NOT basic definitions or recall
+- Provide detailed step-by-step solutions with full working
 - Use proper LaTeX notation for all mathematical expressions${customInstructionsSection}
 
 Format your response ENTIRELY in LaTeX using this EXACT structure for a proper exam paper:
