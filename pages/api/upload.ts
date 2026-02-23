@@ -605,6 +605,25 @@ REQUIRED: Cover ALL chapters/topics from the PDF equally.`;
 ║                        ⚠️ HIGHEST PRIORITY - MUST FOLLOW ⚠️                          ║
 ╚════════════════════════════════════════════════════════════════════════════════════════╝
 
+CRITICAL PRINCIPLE #0: TEXTBOOK-ONLY QUESTIONS (ABSOLUTE REQUIREMENT)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ THIS IS THE HIGHEST-PRIORITY RULE — OVERRIDES EVERYTHING ELSE ⚠️
+
+✗ NEVER generate questions from your own general knowledge or training data
+✗ NEVER invent topics, concepts, or problems that are NOT present in the uploaded PDF textbook
+✗ NEVER add content from external sources, other textbooks, or the internet
+✗ NEVER assume what "should" be in the textbook — use ONLY what IS actually there
+✗ NEVER generate questions on topics not covered in the provided PDF
+
+✓ EVERY single question MUST be directly traceable to specific content in the uploaded PDF textbook
+✓ ALL concepts, formulas, theorems, facts used in questions MUST appear in the PDF
+✓ Questions must be based on chapters, topics, examples, and exercises FOUND IN THE PDF
+✓ If the PDF covers only 5 chapters, generate questions ONLY from those 5 chapters — do not add extra topics
+✓ If a topic is NOT in the PDF, do NOT generate questions about it, even if it's commonly taught in that subject
+✓ Solutions must reference concepts and methods as presented in the textbook
+
+VERIFICATION: Before outputting each question, mentally verify: "Is this topic/concept present in the uploaded PDF?" If NO → discard and replace with a question from the PDF.
+
 CRITICAL PRINCIPLE #1: MODERATE-TO-DIFFICULT, EXAM-IMPORTANT QUESTIONS ONLY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✗ NEVER generate basic/brute-force level questions (e.g., "What is X?", "Define Y")
@@ -672,6 +691,17 @@ BANNED QUESTIONS (AUTO-REJECT IF FOUND):
 ❌ Questions from ONLY the first page or introduction section
 ❌ Trivial fill-in-the-blank with answers directly stated in the chapter
 ❌ Single-step, direct formula substitution problems
+❌ Questions that can be answered by reading a single line from the textbook
+❌ Generic questions not tied to specific textbook content
+❌ One-liner theory questions ("Name the process...", "Which element...")
+
+QUALITY BENCHMARKS — EACH QUESTION MUST MEET AT LEAST 2 OF THESE:
+✓ Requires combining 2+ concepts from the chapter
+✓ Involves multi-step calculation or multi-paragraph reasoning
+✓ Tests application of theory to a new scenario or numerical problem
+✓ Requires diagram interpretation, data analysis, or graphical reasoning
+✓ Modeled after board-exam or competitive-exam level questions
+✓ Comparable to exercise-section difficulty (not intro/example level)
 
 REQUIRED ELEMENTS FOR EACH QUESTION:
 ✓ Specific, clear problem statement (no ambiguity)
@@ -702,7 +732,9 @@ CRITICAL PRINCIPLE #5: SOLUTION QUALITY (MANDATORY FOR ALL)
   const prompt = patternText
     ? `You are an expert ${subject} educator and professional LaTeX exam paper creator.
 
-TASK: Generate a NEW exam question paper that EXACTLY replicates the structure and format described in the pattern analysis below, using ONLY content from the provided PDF textbook (attached).
+TASK: Generate a NEW exam question paper that EXACTLY replicates the structure and format described in the pattern analysis below.
+
+⚠️ ABSOLUTE RULE: Generate questions EXCLUSIVELY from the attached PDF textbook. Do NOT use your own knowledge, training data, or any external source. Every question must be directly based on content, examples, exercises, or topics found in the uploaded PDF. If a topic is not in the PDF, do NOT include it.
 
 ${universalQualityDirective}
 
@@ -732,11 +764,15 @@ GENERATION RULES:
    % START SOLUTION
    [Step-by-step solution with detailed working]
    % END SOLUTION
-8. Use proper LaTeX: amsmath, amssymb, geometry, enumitem, fancyhdr
-9. Use $...$ for inline math, \\[...\\] for display math
-10. For MCQs: use (a)(b)(c)(d) format with plausible distractors
-11. For fill-in-blanks: use \\underline{\\hspace{3cm}}
-12. For Column Matching: use LaTeX tabular with shuffled Column B
+9. Use proper LaTeX: amsmath, amssymb, geometry, enumitem, fancyhdr, array, tabularx
+10. Use $...$ for inline math, \\[...\\] for display math (avoid $$ which can cause alignment issues)
+11. For MCQs: use \\begin{enumerate}[label=(\\alph*), leftmargin=2em] for perfectly aligned options
+12. For fill-in-blanks: use \\underline{\\hspace{3cm}}
+13. For Column Matching: use LaTeX tabularx with proper column alignment
+14. **FORMATTING**: Use \\noindent\\textbf{Question N [X marks]} \\hfill \\textit{\\small [Chapter Name]} for each question header
+15. The chapter/topic name MUST appear right-aligned on the same line using \\hfill
+16. Use \\noindent before question text. Add \\vspace{0.5cm} and \\noindent\\rule{0.3\\textwidth}{0.3pt} between questions
+17. For sub-parts: use \\begin{enumerate}[label=(\\alph*)] or [label=(\\roman*)] with leftmargin=2em
 
 IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no explanations, no code fences.`
     : `You are an expert ${subject} educator and LaTeX document formatter.
@@ -745,17 +781,20 @@ ${universalQualityDirective}
 
 ${guidelines}
 
+⚠️ ABSOLUTE RULE: Generate questions EXCLUSIVELY from the attached PDF textbook. Do NOT use your own knowledge, training data, or any external source. Every question must be directly based on content, examples, exercises, or topics found in the uploaded PDF. If a topic is not in the PDF, do NOT include it.
+
 Read the attached PDF textbook THOROUGHLY from FIRST page to LAST page. 
 
 STEP 1: Identify ALL chapters, units, and sections in the textbook.
 STEP 2: For EACH chapter, read the EXERCISE/PRACTICE section at the end, plus any Solved Examples.
-STEP 3: Generate questions primarily INSPIRED BY the exercises, practice problems, and solved examples from EVERY chapter.
+STEP 3: Generate questions ONLY from the content found in the PDF — inspired by exercises, practice problems, and solved examples from EVERY chapter.
 
 Then generate high-quality ${subject} questions covering ALL chapters with STRICT EQUAL DISTRIBUTION.${questionBreakdown}${customInstructionsSection}
 
 Question Requirements:
 - Question types: ${questionTypeDesc}
 - Difficulty level: ${difficulty} (MINIMUM moderate level for secondary/higher-secondary students)
+- **TEXTBOOK ONLY**: Every question MUST come from the uploaded PDF content. Do NOT invent topics or use external knowledge.
 - **MANDATORY EQUAL DISTRIBUTION**: If the textbook has N chapters, each chapter MUST have approximately (Total Questions / N) questions. Every single chapter must be represented. Verify this before outputting.
 - **EXERCISE PRIORITY**: At least 70% of questions should be inspired by or similar to exercise/practice section problems. The remaining 30% can come from solved examples and important in-text problems.
 - Each question should be INNOVATIVE, EXAM-STANDARD, and MODERATE-TO-DIFFICULT — not basic recall or first-page definitions
@@ -771,6 +810,8 @@ Format your response ENTIRELY in LaTeX using this structure:
 \\usepackage{enumitem}
 \\usepackage{fancyhdr}
 \\usepackage{graphicx}
+\\usepackage{array}
+\\usepackage{tabularx}
 \\geometry{margin=0.75in, top=1in, bottom=1in}
 
 \\pagestyle{fancy}
@@ -802,28 +843,44 @@ Format your response ENTIRELY in LaTeX using this structure:
 \\vspace{0.5cm}
 \\section*{QUESTIONS}
 
-[Generate each question as:
-\\subsection*{Question N [X marks]}
-[Question text]
+[Generate each question using this EXACT format for perfect alignment:
+
+\\noindent\\textbf{Question 1 [X marks]} \\hfill \\textit{\\small [Chapter Name]}
+
+\\noindent [Question text with proper LaTeX math formatting. Use proper indentation and spacing.]
+
+\\begin{enumerate}[label=(\\alph*), leftmargin=2em]
+  \\item Option A
+  \\item Option B
+\\end{enumerate}
 
 % START SOLUTION
-\\subsection*{Solution}
-[Detailed solution]
+\\noindent\\textbf{Solution:}
+
+[Detailed step-by-step solution]
 % END SOLUTION
 
 \\vspace{0.5cm}
+\\noindent\\rule{0.3\\textwidth}{0.3pt}
+\\vspace{0.3cm}
+
 ]
 
 \\end{document}
 
-CRITICAL FORMATTING:
-- Use \\subsection*{Question N [X marks]} for each question
+CRITICAL FORMATTING & ALIGNMENT RULES:
+- Use \\noindent\\textbf{Question N [X marks]} \\hfill \\textit{\\small [Chapter Name]} for EVERY question header
+- The chapter name MUST appear right-aligned on the same line as the question number using \\hfill
+- Use \\noindent before every question text to prevent unwanted indentation
+- Use \\vspace{0.5cm} between questions and \\noindent\\rule{0.3\\textwidth}{0.3pt} as separator
+- For MCQs: Use \\begin{enumerate}[label=(\\alph*), leftmargin=2em] for perfectly aligned options
+- For sub-parts: Use \\begin{enumerate}[label=(\\roman*), leftmargin=2em] or [label=(\\alph*)]
+- For Fill in Blanks: Use \\underline{\\hspace{3cm}}
+- For Column Matching: Use LaTeX tabular/tabularx with proper column alignment
+- Use $...$ for inline math, \\[...\\] for display math (NOT $$ which can cause alignment issues)
 - Wrap EVERY solution with % START SOLUTION and % END SOLUTION
-- Use $...$ for inline math, $$...$$ for display math
-- For MCQs: (a), (b), (c), (d) format
-- For Fill in Blanks: \\underline{\\hspace{3cm}}
-- For Column Matching: LaTeX tabular with shuffled Column B
 - Number questions consecutively starting from 1
+- Ensure NO orphaned lines or page breaks in the middle of a question
 
 IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no code fences.`;
 
@@ -1428,11 +1485,13 @@ EXAMPLES OF EXAM-STANDARD QUESTIONS:
   const prompt = patternText
     ? `You are an expert ${subject} educator and professional LaTeX exam paper creator.
 
-TASK: Generate a NEW exam question paper that EXACTLY replicates the structure and format described in the pattern analysis below, using ONLY content from the provided textbook material.
+TASK: Generate a NEW exam question paper that EXACTLY replicates the structure and format described in the pattern analysis below.
+
+⚠️ ABSOLUTE RULE: Generate questions EXCLUSIVELY from the textbook content provided below. Do NOT use your own knowledge, training data, or any external source. Every single question must be directly traceable to content in the textbook. If a topic is not in the textbook content below, do NOT include questions about it.
 
 ${patternSection}
 
-TEXTBOOK CONTENT (source for new questions):
+TEXTBOOK CONTENT (THE ONLY source for questions — do NOT go outside this):
 ${pdfText}
 
 GENERATION RULES:
@@ -1451,24 +1510,33 @@ GENERATION RULES:
 6. Match the difficulty level: ${difficulty} (MINIMUM moderate level for secondary/higher-secondary students — no basic recall questions)
 7. Distribute questions STRICTLY EVENLY across all chapters/topics in the textbook content. If N chapters exist, each chapter gets approximately (Total Questions / N) questions. No chapter should have 0 questions.
 8. **EXERCISE PRIORITY**: At least 70% of questions should be inspired by exercise/practice section problems from the textbook, not introductory text.
-8. For EVERY question, include a solution wrapped in markers:
+9. For EVERY question, include a solution wrapped in markers:
    % START SOLUTION
    [Step-by-step solution]
    % END SOLUTION
-9. Use proper LaTeX packages: amsmath, amssymb, geometry, enumitem, fancyhdr
-10. Use $...$ for inline math and \\[...\\] or $$...$$ for display math
-11. For MCQs: use the exact option format from the pattern (e.g., (a)(b)(c)(d))
-12. For fill-in-blanks: use \\underline{\\hspace{3cm}}
-13. For True/False: state a clear declarative statement and ask if it's True or False
-14. For Column Matching: use a LaTeX tabular with Column A and Column B. Shuffle Column B so answers don't align directly. Solution should list correct pairs.
-15. For Assertion-Reason: follow the exact assertion-reason format from the pattern
-16. For Numerical: include actual calculations with numbers and units
+10. Use proper LaTeX packages: amsmath, amssymb, geometry, enumitem, fancyhdr, array, tabularx
+11. Use $...$ for inline math and \\[...\\] for display math (avoid $$ which causes alignment issues)
+12. For MCQs: use \\begin{enumerate}[label=(\\alph*), leftmargin=2em] for perfectly aligned options
+13. For fill-in-blanks: use \\underline{\\hspace{3cm}}
+14. For True/False: state a clear declarative statement and ask if it's True or False
+15. For Column Matching: use LaTeX tabularx with Column A and Column B. Shuffle Column B.
+16. For Assertion-Reason: follow the exact assertion-reason format from the pattern
+17. For Numerical: include actual calculations with numbers and units
+18. **FORMATTING & ALIGNMENT (CRITICAL)**:
+    - Use \\noindent\\textbf{Question N [X marks]} \\hfill \\textit{\\small [Chapter Name]} for EVERY question header
+    - The chapter/topic name MUST appear right-aligned on the same line using \\hfill
+    - Use \\noindent before question text to prevent unwanted indentation
+    - Add \\vspace{0.5cm} between questions and \\noindent\\rule{0.3\\textwidth}{0.3pt} as separator
+    - For sub-parts: use \\begin{enumerate}[label=(\\alph*), leftmargin=2em] or [label=(\\roman*)]
+    - Ensure clean, professional alignment throughout
 
 IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no explanations, no code fences.`
     : `You are an expert ${subject} educator and LaTeX document formatter.
 
-Content:
+TEXTBOOK CONTENT (THE ONLY source for questions — do NOT go outside this):
 ${pdfText}
+
+⚠️ ABSOLUTE RULE: Generate questions EXCLUSIVELY from the textbook content above. Do NOT use your own knowledge, training data, or any external source. Every single question must be directly traceable to content in the textbook above. If a topic is not mentioned above, do NOT create questions about it.
 
 IMPORTANT: Read the ENTIRE content above carefully. Pay special attention to:
 - EXERCISE/PRACTICE sections at the end of each chapter (these are your PRIMARY source for questions)
@@ -1496,6 +1564,8 @@ Format your response ENTIRELY in LaTeX using this EXACT structure for a proper e
 \\usepackage{enumitem}
 \\usepackage{fancyhdr}
 \\usepackage{graphicx}
+\\usepackage{array}
+\\usepackage{tabularx}
 \\geometry{margin=0.75in, top=1in, bottom=1in}
 
 \\pagestyle{fancy}
@@ -1524,7 +1594,6 @@ Format your response ENTIRELY in LaTeX using this EXACT structure for a proper e
 \\item Answer all questions in the space provided or on separate sheets.
 \\item Show all working for full credit.
 \\item Marks for each question are indicated in brackets.
-\\item Use of calculator is permitted (if applicable).
 ${questionBreakdown ? '\\item ' + questionBreakdown.replace(/\n/g, '\n\\item ').replace('1 Mark Questions:', '\\textbf{Section A:} 1 Mark Questions').replace('Questions by Marks:', '\\textbf{Section B:} Higher Mark Questions') : ''}
 \\end{itemize}
 }}
@@ -1534,43 +1603,51 @@ ${questionBreakdown ? '\\item ' + questionBreakdown.replace(/\n/g, '\n\\item ').
 % Questions Section
 \\section*{QUESTIONS}
 
-[Now generate each question using this EXACT format:
+[Generate each question using this EXACT format for perfect alignment:
 
-\\subsection*{Question 1 [X marks]}
-[Question text with proper LaTeX math formatting]
+\\noindent\\textbf{Question 1 [X marks]} \\hfill \\textit{\\small [Chapter Name]}
+
+\\noindent [Question text with proper LaTeX math formatting.]
+
+\\begin{enumerate}[label=(\\alph*), leftmargin=2em]
+  \\item Option A
+  \\item Option B
+\\end{enumerate}
 
 % START SOLUTION
-\\subsection*{Solution}
-[Detailed solution with step-by-step explanation]
+\\noindent\\textbf{Solution:}
+
+[Detailed step-by-step solution]
 % END SOLUTION
 
 \\vspace{0.5cm}
+\\noindent\\rule{0.3\\textwidth}{0.3pt}
+\\vspace{0.3cm}
 
-Repeat for all questions, ensuring proper numbering and mark allocation.]
+Repeat for all questions.]
 
 \\end{document}
 
-CRITICAL FORMATTING REQUIREMENTS:
-- Use \\subsection*{Question N [X marks]} for each question header
-- Use \\subsection*{Solution} for each solution
-- Wrap EVERY solution with % START SOLUTION and % END SOLUTION comments
-- Use $...$ for inline math and $$...$$ or \\[...\\] for display math
-- For MCQs: Use (a), (b), (c), (d) format
+CRITICAL FORMATTING & ALIGNMENT RULES:
+- Use \\noindent\\textbf{Question N [X marks]} \\hfill \\textit{\\small [Chapter Name]} for EVERY question header
+- The chapter name MUST appear right-aligned on the same line as the question number using \\hfill
+- Use \\noindent before every question text to prevent unwanted indentation
+- Use \\vspace{0.5cm} between questions and \\noindent\\rule{0.3\\textwidth}{0.3pt} as separator
+- For MCQs: Use \\begin{enumerate}[label=(\\alph*), leftmargin=2em] for perfectly aligned options
+- For sub-parts: Use \\begin{enumerate}[label=(\\roman*), leftmargin=2em]
 - For Fill in Blanks: Use \\underline{\\hspace{3cm}} for blanks
-- For Column Matching: Use a proper LaTeX table with two columns (Column A and Column B). Format example:
-  \\begin{tabular}{|c|p{5cm}|c|p{5cm}|}
+- For Column Matching: Use a proper LaTeX tabularx with aligned columns:
+  \\begin{tabularx}{\\textwidth}{|c|X|c|X|}
   \\hline
   \\textbf{Column A} & & \\textbf{Column B} & \\\\
   \\hline
   (i) & Item 1 & (a) & Match 1 \\\\
-  (ii) & Item 2 & (b) & Match 2 \\\\
   \\hline
-  \\end{tabular}
-  Shuffle Column B so it does NOT directly align with Column A. The solution should list correct pairs like (i)-(c), (ii)-(a), etc.
-- Add \\vspace{0.5cm} between questions for spacing
-- Make questions relevant to the provided content
-- STRICTLY follow the custom instructions if provided
-- Number questions consecutively starting from 1`;
+  \\end{tabularx}
+- Use $...$ for inline math and \\[...\\] for display math (avoid $$ which can cause alignment issues)
+- Wrap EVERY solution with % START SOLUTION and % END SOLUTION comments
+- Add \\vspace{0.5cm} between questions for consistent spacing
+- Ensure NO orphaned lines or page breaks in the middle of a question`;
 
   console.log('Sending request to Gemini API...');
   const timeoutPromise = new Promise<never>((_, reject) => {

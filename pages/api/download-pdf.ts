@@ -272,22 +272,22 @@ export default async function handler(
       processedLatex = processedLatex.replace(/% START SOLUTION[\s\S]*?% END SOLUTION/gi, '');
 
       // Pattern 1: \subsection*{Solution} ... until next question or end
-      processedLatex = processedLatex.replace(/\\subsection\*\{Solution\}[\s\S]*?(?=\\noindent\\textbf\{Q\.|\\subsection\*\{Q|\\subsection\*\{Question|\\end\{document\})/gi, '');
+      processedLatex = processedLatex.replace(/\\subsection\*\{Solution\}[\s\S]*?(?=\\noindent\s*\\textbf\{(?:Q|Question)|\\subsection\*\{(?:Q|Question)|\\section\*|\\end\{document\})/gi, '');
       
       // Pattern 2: \noindent\textbf{Solution:} format
-      processedLatex = processedLatex.replace(/\\noindent\\textbf\{Solution:\}[\s\S]*?(?=\\noindent\\textbf\{Q\.|\\subsection\*\{Q|\\subsection\*\{Question|\\end\{document\})/gi, '');
+      processedLatex = processedLatex.replace(/\\noindent\s*\\textbf\{Solution[:\.]?\}[\s\S]*?(?=\\noindent\s*\\textbf\{(?:Q|Question)|\\subsection\*\{(?:Q|Question)|\\section\*|\\end\{document\})/gi, '');
       
-      // Pattern 3: \textbf{Solution:} without \noindent
-      processedLatex = processedLatex.replace(/\\textbf\{Solution[:\.]?\}[\s\S]*?(?=\\noindent\\textbf\{Q\.|\\subsection\*\{Q|\\subsection\*\{Question|\\textbf\{Q\.|\\end\{document\})/gi, '');
+      // Pattern 3: \textbf{Solution:} or \textbf{Solution} without \noindent
+      processedLatex = processedLatex.replace(/\\textbf\{Solution[:\.]?\}[\s\S]*?(?=\\noindent\s*\\textbf\{(?:Q|Question)|\\subsection\*\{(?:Q|Question)|\\textbf\{(?:Q|Question)|\\section\*|\\end\{document\})/gi, '');
       
       // Pattern 4: Plain "Solution:" text
-      processedLatex = processedLatex.replace(/\n\s*Solution:\s*[\s\S]*?(?=\\noindent\\textbf\{Q\.|\\subsection\*\{Q|\\subsection\*\{Question|\\end\{document\})/gi, '');
+      processedLatex = processedLatex.replace(/\n\s*Solution:\s*[\s\S]*?(?=\\noindent\s*\\textbf\{(?:Q|Question)|\\subsection\*\{(?:Q|Question)|\\section\*|\\end\{document\})/gi, '');
       
       // Clean up excessive vertical spaces that might be left after removing solutions
       processedLatex = processedLatex.replace(/(\\vspace\{[^}]*\}\s*){2,}/g, '\\vspace{0.5cm}\n');
       
       // Clean up multiple consecutive rule commands
-      processedLatex = processedLatex.replace(/(\\noindent\\rule\{[^}]*\}\{[^}]*\}\s*){2,}/g, '\\noindent\\rule{0.5\\textwidth}{0.3pt}\n');
+      processedLatex = processedLatex.replace(/(\\noindent\\rule\{[^}]*\}\{[^}]*\}\s*){2,}/g, '\\noindent\\rule{0.3\\textwidth}{0.3pt}\n');
       
       // Remove any orphaned "Solution" headers that might be left
       processedLatex = processedLatex.replace(/\\textbf\{Solution\}/gi, '');
