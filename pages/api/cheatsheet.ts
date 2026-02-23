@@ -378,6 +378,7 @@ STEM-SPECIFIC REQUIREMENTS:
 - Highlight frequently-asked formulas with \\textbf{(FAQ)} or \\textbf{(IMP)}
 - Group related formulas together so students see connections
 - Include special cases and boundary conditions for formulas
+- 5 MARKS NOTES: For each chapter write 2-4 exam-ready notes on derivations, explain-with-example type topics, prove-that problems, or "write the principle and applications" style answers
 ${extraSections}`;
     case 'language':
       return `
@@ -392,6 +393,7 @@ LANGUAGE-SPECIFIC REQUIREMENTS:
 - Figure of speech examples extracted from the text
 - Character sketches with key traits
 - Chapter-wise summary in 5-8 lines
+- 5 MARKS NOTES: For each chapter write 2-4 exam-ready notes on character analysis, theme discussion, summary explanations, context-of-the-quote answers, or "discuss the significance" type answers
 ${extraSections}`;
     case 'commerce':
       return `
@@ -405,6 +407,7 @@ COMMERCE-SPECIFIC REQUIREMENTS:
 - Include commonly confused terms with clear distinctions
 - Format-wise examples for balance sheet, P&L, cash flow statement
 - Important numerical formulas with worked mini-examples
+- 5 MARKS NOTES: For each chapter write 2-4 exam-ready notes on "explain with journal entry", "differentiate between X and Y", "describe the process of", or "advantages and limitations" type answers
 ${extraSections}`;
     case 'humanities':
       return `
@@ -419,6 +422,7 @@ HUMANITIES-SPECIFIC REQUIREMENTS:
 - Key differences/comparisons in tabular format (at least 5 points each)
 - Important treaties, acts, movements with year + key provisions
 - Movements: leaders + demands + outcomes
+- 5 MARKS NOTES: For each chapter write 2-4 exam-ready notes on "describe the causes and effects of", "role of X in Y", "explain the significance of", year-wise event narrations, or "discuss the reforms/acts" type answers
 ${extraSections}`;
   }
 }
@@ -507,6 +511,18 @@ For EACH chapter, include ALL of these sections (skip ONLY if truly not applicab
 - Include mnemonics or memory tricks if applicable
 - Mark the single most important point with \\textbf{MOST IMPORTANT}
 
+** 5 MARKS IMPORTANT NOTES ** (CRITICAL SECTION)
+- For EACH chapter, write 2-4 ready-made short notes that are commonly asked as 5-mark questions in exams
+- Each note should be 80-120 words — the IDEAL length for a 5-mark answer
+- Cover the most frequently examined topics from each chapter
+- Structure each note with: Topic title + clear explanation + key points/steps + conclusion line
+- For STEM subjects: include relevant formulas/equations within the note
+- For History: cover important events, movements, reforms, acts with causes + effects
+- For Geography: cover important processes, formations, distributions with reasons
+- For Commerce: cover important concepts, principles, provisions with examples
+- These should be EXAM-READY — a student can memorize and write them directly as answers
+- Mark the most frequently asked one with \\textbf{(MOST ASKED)}
+
 ${subjectSpecificInstructions}
 
 ═══════════════════════════════════════════════════
@@ -594,7 +610,17 @@ Generate a COMPLETE, COMPILABLE LaTeX document. Use this EXACT structure:
 \\begin{enumerate}[leftmargin=1.5em, itemsep=1pt]
   \\item ...
 \\end{enumerate}
+\subsection*{\color{formulacolor} ✏️ 5 Marks Important Notes}
+% Ready-made short notes for 5-mark exam questions
+\noindent\textbf{1. Topic Title} \hfill \textit{\small [5 Marks]} \\
+ Write 80-120 word exam-ready note here covering the key concept,
+ explanation, important points, and conclusion. Include formulas if STEM.
+ This should be directly usable as a 5-mark exam answer.
 
+\noindent\rule{\textwidth}{0.2pt}
+
+\noindent\textbf{2. Another Important Topic} \hfill \textit{\small [5 Marks]} \\
+ Another exam-ready note...
 % Repeat for ALL chapters...
 
 \\end{document}

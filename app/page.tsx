@@ -1070,6 +1070,7 @@ export default function Home() {
                       <div className="flex gap-2"><span>✓</span> <span><strong>Comparison tables</strong> & classification charts</span></div>
                       <div className="flex gap-2"><span>✓</span> <span><strong>Key points marked (IMP)</strong> for exam focus</span></div>
                       <div className="flex gap-2"><span>✓</span> <span><strong>Quick revision bullets</strong> for last-minute study</span></div>
+                      <div className="flex gap-2 md:col-span-2"><span>⭐</span> <span><strong>5 Marks Important Notes</strong> — exam-ready short answers you can memorize & write directly</span></div>
                     </div>
                   </div>
 
