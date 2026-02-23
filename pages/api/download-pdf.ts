@@ -30,6 +30,218 @@ function sanitizeLatex(latex: string): string {
   return sanitized;
 }
 
+/**
+ * Fix unbalanced LaTeX environments that can cause compilation errors.
+ * This checks for unclosed begin/end pairs and tries to repair them.
+ */
+function fixUnbalancedEnvironments(latex: string): string {
+  let fixed = latex;
+
+  // Count and fix unbalanced braces
+  let braceDepth = 0;
+  let inComment = false;
+  for (let i = 0; i < fixed.length; i++) {
+    const ch = fixed[i];
+    if (ch === '%' && (i === 0 || fixed[i - 1] !== '\\')) {
+      inComment = true;
+      continue;
+    }
+    if (ch === '\n') {
+      inComment = false;
+      continue;
+    }
+    if (inComment) continue;
+    if (ch === '{' && (i === 0 || fixed[i - 1] !== '\\')) braceDepth++;
+    if (ch === '}' && (i === 0 || fixed[i - 1] !== '\\')) braceDepth--;
+  }
+  // Append missing closing braces before \end{document}
+  if (braceDepth > 0) {
+    const closingBraces = '}'.repeat(braceDepth);
+    fixed = fixed.replace(/\\end\{document\}/, closingBraces + '\n\\end{document}');
+  }
+
+  // Fix unbalanced environments (begin without end)
+  const envRegex = /\\begin\{(\w+)\}/g;
+  const endRegex = /\\end\{(\w+)\}/g;
+  const envCounts: Record<string, number> = {};
+
+  let m;
+  while ((m = envRegex.exec(fixed)) !== null) {
+    const env = m[1];
+    if (env === 'document') continue;
+    envCounts[env] = (envCounts[env] || 0) + 1;
+  }
+  while ((m = endRegex.exec(fixed)) !== null) {
+    const env = m[1];
+    if (env === 'document') continue;
+    envCounts[env] = (envCounts[env] || 0) - 1;
+  }
+
+  // Close any unclosed environments before \end{document}
+  const unclosed: string[] = [];
+  for (const [env, count] of Object.entries(envCounts)) {
+    for (let i = 0; i < count; i++) {
+      unclosed.push(`\\end{${env}}`);
+    }
+  }
+  if (unclosed.length > 0) {
+    fixed = fixed.replace(
+      /\\end\{document\}/,
+      unclosed.join('\n') + '\n\\end{document}'
+    );
+  }
+
+  return fixed;
+}
+
+/**
+ * Restructure LaTeX so that ALL questions appear first, followed by ALL solutions at the end.
+ * This extracts solutions from their inline positions and appends them as a separate "ANSWER KEY" section.
+ */
+function restructureWithSolutionsAtEnd(latex: string): string {
+  const solutions: { number: string; content: string }[] = [];
+
+  // ── Step 1 : Extract solutions from  % START SOLUTION … % END SOLUTION markers ──
+  // Build a list of {startIdx, endIdx, solutionBody} by scanning line-by-line so we
+  // don't accidentally break multi-line LaTeX (align, tabular, etc.)
+
+  const lines = latex.split('\n');
+  let inSolution = false;
+  let solutionLines: string[] = [];
+  let solutionStartLine = -1;
+  const solutionBlocks: { startLine: number; endLine: number; body: string }[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (/^%\s*START\s+SOLUTION/i.test(trimmed)) {
+      inSolution = true;
+      solutionLines = [];
+      solutionStartLine = i;
+      continue;
+    }
+    if (/^%\s*END\s+SOLUTION/i.test(trimmed)) {
+      if (inSolution) {
+        solutionBlocks.push({
+          startLine: solutionStartLine,
+          endLine: i,
+          body: solutionLines.join('\n').trim(),
+        });
+      }
+      inSolution = false;
+      continue;
+    }
+    if (inSolution) {
+      solutionLines.push(lines[i]);
+    }
+  }
+
+  // ── Step 2 : Determine question number for each solution ──
+  for (const block of solutionBlocks) {
+    // Scan backwards from the solution start to find the nearest question heading
+    const textBefore = lines.slice(0, block.startLine).join('\n');
+
+    // Multiple question-heading patterns Gemini may use
+    const qRegexes = [
+      /\\subsection\*\{(?:Question|Q\.?)\s*(\d+)/g,
+      /\\textbf\{(?:Question|Q\.?)\s*(\d+)/g,
+      /\\noindent\s*\\textbf\{(?:Question|Q\.?)\s*(\d+)/g,
+      /\\item\s*\[Q\.?\s*(\d+)/g,
+      /\\textbf\{(\d+)\./g,              // \textbf{1.  ...}
+      /\\noindent\s*(\d+)\.\s*\\textbf/g, // 1. \textbf{...}
+      /\\section\*\{(?:Question|Q\.?)\s*(\d+)/g,
+    ];
+
+    let qNum = '';
+    let maxPos = -1;
+
+    for (const rx of qRegexes) {
+      let m;
+      while ((m = rx.exec(textBefore)) !== null) {
+        if (m.index > maxPos) {
+          maxPos = m.index;
+          qNum = m[1];
+        }
+      }
+    }
+
+    if (!qNum) {
+      qNum = String(solutions.length + 1); // fallback: sequential
+    }
+
+    // Clean the solution body — strip redundant headers
+    let body = block.body;
+    body = body.replace(/^\\subsection\*\{Solution[^}]*\}\s*/i, '');
+    body = body.replace(/^\\textbf\{Solution[^}]*\}\s*/i, '');
+    body = body.replace(/^\\noindent\s*\\textbf\{Solution[^}]*\}\s*/i, '');
+    body = body.replace(/^\s*\\paragraph\*?\{Solution[^}]*\}\s*/i, '');
+    body = body.replace(/^\s*Solution[:\.]?\s*/i, '');
+    body = body.trim();
+
+    solutions.push({ number: qNum, content: body });
+  }
+
+  // ── Step 3 : Rebuild the document — questions only, then solutions at end ──
+  // Remove solution blocks by zeroing out lines between markers (inclusive)
+  const outputLines = [...lines];
+  for (const block of solutionBlocks) {
+    for (let i = block.startLine; i <= block.endLine; i++) {
+      outputLines[i] = ''; // blank out
+    }
+  }
+
+  let questionsOnly = outputLines.join('\n');
+
+  // Also remove any stray \subsection*{Solution} ... blocks that were NOT inside markers
+  questionsOnly = questionsOnly.replace(
+    /\\subsection\*\{Solution\}[\s\S]*?(?=\\subsection\*\{(?:Question|Q)|\\section\*|\\end\{document\})/gi,
+    ''
+  );
+  questionsOnly = questionsOnly.replace(
+    /\\noindent\s*\\textbf\{Solution:\}[\s\S]*?(?=\\noindent\s*\\textbf\{(?:Q|Question)|\\subsection\*\{(?:Question|Q)|\\section\*|\\end\{document\})/gi,
+    ''
+  );
+  questionsOnly = questionsOnly.replace(
+    /\\textbf\{Solution[:\.]?\}[\s\S]*?(?=\\noindent\s*\\textbf\{(?:Q|Question)|\\subsection\*\{(?:Question|Q)|\\textbf\{(?:Q|Question)|\\section\*|\\end\{document\})/gi,
+    ''
+  );
+
+  // Final cleanup — remove orphaned "Solution" headers & collapse excessive whitespace
+  questionsOnly = questionsOnly.replace(/\\subsection\*\{Solution\}/gi, '');
+  questionsOnly = questionsOnly.replace(/\\textbf\{Solution\}/gi, '');
+  questionsOnly = questionsOnly.replace(/(\\vspace\{[^}]*\}\s*){2,}/g, '\\vspace{0.5cm}\n');
+  // collapse runs of 3+ blank lines to 2
+  questionsOnly = questionsOnly.replace(/\n{4,}/g, '\n\n\n');
+
+  // ── Step 4 : Append ANSWER KEY section ──
+  if (solutions.length > 0) {
+    const solParts = solutions.map(
+      (sol) =>
+        `\\subsection*{Answer ${sol.number}}\n${sol.content}\n\n\\vspace{0.4cm}`
+    );
+
+    const answerSection = `
+\\newpage
+\\begin{center}
+{\\Large \\textbf{ANSWER KEY \\& SOLUTIONS}}\\\\[0.3cm]
+\\rule{\\textwidth}{0.4pt}
+\\end{center}
+\\vspace{0.5cm}
+
+${solParts.join('\n\n')}
+`;
+
+    questionsOnly = questionsOnly.replace(
+      /\\end\{document\}/,
+      answerSection + '\n\\end{document}'
+    );
+  }
+
+  // ── Step 5 : Fix any broken LaTeX caused by extraction ──
+  questionsOnly = fixUnbalancedEnvironments(questionsOnly);
+
+  return questionsOnly;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -45,13 +257,16 @@ export default async function handler(
       return res.status(400).json({ error: 'No LaTeX content provided' });
     }
 
-    // Process LaTeX to remove solutions if needed
+    // Process LaTeX to handle solutions placement
     let processedLatex = latex;
     
     // Sanitize LaTeX to fix common syntax errors
     processedLatex = sanitizeLatex(processedLatex);
     
-    if (!includeSolutions) {
+    if (includeSolutions) {
+      // Restructure: ALL questions first, then ALL solutions at the end with proper numbering
+      processedLatex = restructureWithSolutionsAtEnd(processedLatex);
+    } else {
       // Remove all solution sections comprehensively
       // Pattern 0: Explicit markers (High Priority)
       processedLatex = processedLatex.replace(/% START SOLUTION[\s\S]*?% END SOLUTION/gi, '');
@@ -78,6 +293,11 @@ export default async function handler(
       processedLatex = processedLatex.replace(/\\textbf\{Solution\}/gi, '');
       processedLatex = processedLatex.replace(/\\subsection\*\{Solution\}/gi, '');
     }
+
+    // Always fix unbalanced environments after any processing
+    processedLatex = fixUnbalancedEnvironments(processedLatex);
+
+    console.log(`Processed LaTeX length: ${processedLatex.length}, includeSolutions: ${includeSolutions}`);
 
     try {
       // Compile LaTeX to PDF using external service
