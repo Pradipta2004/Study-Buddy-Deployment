@@ -6,8 +6,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'STUDYBUDDY - AI Question Generator',
-  description: 'Generate customized questions from PDF textbooks using AI - Powered by INFOTECH SERVICES',
+  title: 'STUDYBUDDY - AI Study Assistant',
+  description: 'Generate question papers, cheatsheets, and revision notes from PDF textbooks using AI - Powered by INFOTECH SERVICES',
 }
 
 export default function RootLayout({

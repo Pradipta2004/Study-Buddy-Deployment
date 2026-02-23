@@ -72,8 +72,47 @@ const FEEDBACK_SUBJECTS = [
   'Medical Science', 'Commerce',
 ];
 
+// Cheatsheet subject options
+const CHEATSHEET_SUBJECTS = [
+  { value: 'mathematics', label: '📐 Mathematics' },
+  { value: 'physics', label: '⚛️ Physics' },
+  { value: 'chemistry', label: '🧪 Chemistry' },
+  { value: 'biology', label: '🧬 Biology' },
+  { value: 'physical-science', label: '⚛️ Physical Science' },
+  { value: 'life-science', label: '🧬 Life Science' },
+  { value: 'english', label: '📚 English' },
+  { value: 'history', label: '📜 History' },
+  { value: 'geography', label: '🗺️ Geography' },
+  { value: 'economics', label: '💰 Economics' },
+  { value: 'computer-science', label: '💻 Computer Science' },
+  { value: 'environmental-science', label: '🌱 Environmental Science' },
+  { value: 'political-science', label: '🏛️ Political Science' },
+  { value: 'accountancy', label: '📊 Accountancy' },
+  { value: 'business-studies', label: '💼 Business Studies' },
+  { value: 'psychology', label: '🧠 Psychology' },
+  { value: 'sociology', label: '👥 Sociology' },
+  { value: 'statistics', label: '📈 Statistics' },
+  { value: 'engineering', label: '⚙️ Engineering' },
+  { value: 'commerce', label: '💳 Commerce' },
+  { value: 'others', label: '📝 Others' },
+];
+
+const CHEATSHEET_CLASSES = [
+  { value: '4', label: 'Class 4' },
+  { value: '5', label: 'Class 5' },
+  { value: '6', label: 'Class 6' },
+  { value: '7', label: 'Class 7' },
+  { value: '8', label: 'Class 8' },
+  { value: '9', label: 'Class 9' },
+  { value: '10', label: 'Class 10' },
+  { value: '11', label: 'Class 11' },
+  { value: '12', label: 'Class 12' },
+  { value: 'college', label: 'College/University' },
+];
+
 export default function Home() {
   const [started, setStarted] = useState(false);
+  const [activeFeature, setActiveFeature] = useState<'questions' | 'cheatsheet' | null>(null);
   const [mode, setMode] = useState<'pattern' | 'custom' | 'ai-magic' | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [patternFile, setPatternFile] = useState<File | null>(null);
@@ -93,6 +132,19 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
   const [showCompleteSolutions, setShowCompleteSolutions] = useState(false);
   const [allQuestions, setAllQuestions] = useState<Array<{ number: number; question: string; solution: string }>>([]);
+
+  // Cheatsheet state
+  const [cheatsheetFile, setCheatsheetFile] = useState<File | null>(null);
+  const [cheatsheetSubject, setCheatsheetSubject] = useState('mathematics');
+  const [cheatsheetClass, setCheatsheetClass] = useState('10');
+  const [cheatsheetLatex, setCheatsheetLatex] = useState('');
+  const [cheatsheetLoading, setCheatsheetLoading] = useState(false);
+  const [cheatsheetError, setCheatsheetError] = useState('');
+  const [cheatsheetComplete, setCheatsheetComplete] = useState(false);
+  const [cheatsheetProgress, setCheatsheetProgress] = useState(0);
+  const [cheatsheetTokenUsage, setCheatsheetTokenUsage] = useState<{ promptTokens: number; outputTokens: number; totalTokens: number } | null>(null);
+  const cheatsheetFileInputRef = useRef<HTMLInputElement>(null);
+  const [isDraggingCheatsheet, setIsDraggingCheatsheet] = useState(false);
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const [feedbackForm, setFeedbackForm] = useState({ name: '', studentClass: '', subject: '', suggestions: '' });
   const [feedbackLoading, setFeedbackLoading] = useState(false);
@@ -532,9 +584,223 @@ export default function Home() {
     setPatternFile(null);
     setMode(null);
     setStarted(false);
+    setActiveFeature(null);
     setError('');
     setLoadingProgress(0);
     setTokenUsage(null);
+    // Reset cheatsheet state too
+    setCheatsheetFile(null);
+    setCheatsheetLatex('');
+    setCheatsheetComplete(false);
+    setCheatsheetError('');
+    setCheatsheetProgress(0);
+    setCheatsheetTokenUsage(null);
+  };
+
+  // ===== CHEATSHEET HANDLERS =====
+  const handleCheatsheetFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      if (selectedFile.type === 'application/pdf') {
+        setCheatsheetFile(selectedFile);
+        setCheatsheetError('');
+      } else {
+        setCheatsheetError('Please select a PDF file');
+      }
+    }
+  };
+
+  const handleCheatsheetDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingCheatsheet(true);
+  };
+
+  const handleCheatsheetDragLeave = () => {
+    setIsDraggingCheatsheet(false);
+  };
+
+  const handleCheatsheetDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingCheatsheet(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const droppedFile = e.dataTransfer.files[0];
+      if (droppedFile.type === 'application/pdf') {
+        setCheatsheetFile(droppedFile);
+        setCheatsheetError('');
+      } else {
+        setCheatsheetError('Please drop a PDF file');
+      }
+    }
+  };
+
+  const handleGenerateCheatsheet = async () => {
+    if (!cheatsheetFile) {
+      setCheatsheetError('Please select a PDF file first');
+      return;
+    }
+
+    setCheatsheetLoading(true);
+    setCheatsheetError('');
+    setCheatsheetLatex('');
+    setCheatsheetComplete(false);
+    setCheatsheetProgress(0);
+
+    // Start quote rotation
+    setCurrentQuote(MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]);
+    if (quoteIntervalRef.current) clearInterval(quoteIntervalRef.current);
+    quoteIntervalRef.current = setInterval(() => {
+      setCurrentQuote(MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]);
+    }, 3000);
+
+    // Start progress animation
+    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    let progress = 0;
+    progressIntervalRef.current = setInterval(() => {
+      progress += Math.random() * 20;
+      if (progress > 90) progress = 90;
+      setCheatsheetProgress(Math.min(progress, 90));
+    }, 600);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', cheatsheetFile);
+      formData.append('subject', cheatsheetSubject);
+      formData.append('studentClass', cheatsheetClass);
+
+      const response = await fetch('/api/cheatsheet', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        let errorMessage = 'Cheatsheet generation failed. Please try again.';
+        try {
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          if (text.trim().startsWith('<')) {
+            if (response.status === 504 || response.status === 408) {
+              errorMessage = 'Request timed out. Try a smaller PDF.';
+            } else {
+              errorMessage = `Server Error (${response.status}). Please try again.`;
+            }
+          }
+        }
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      if (!data.latex) {
+        throw new Error('No cheatsheet content received from server');
+      }
+
+      setCheatsheetProgress(100);
+      setCheatsheetLatex(data.latex);
+      if (data.tokenUsage) {
+        setCheatsheetTokenUsage(data.tokenUsage);
+      }
+      setCheatsheetComplete(true);
+    } catch (err: any) {
+      setCheatsheetError(err.message || 'An error occurred during cheatsheet generation');
+    } finally {
+      setCheatsheetLoading(false);
+      if (quoteIntervalRef.current) clearInterval(quoteIntervalRef.current);
+      if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    }
+  };
+
+  const handleDownloadCheatsheetPDF = async () => {
+    try {
+      setCheatsheetError('');
+      setCheatsheetLoading(true);
+      const response = await fetch('/api/download-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          latex: cheatsheetLatex,
+          includeSolutions: true, // no solutions to strip for cheatsheet
+          subject: cheatsheetSubject,
+          studentClass: cheatsheetClass,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'PDF generation failed');
+      }
+
+      const blob = await response.blob();
+      const dateStr = new Date().toISOString().split('T')[0];
+      const sanitizedSubject = cheatsheetSubject.toLowerCase().replace(/[^a-z0-9]+/g, '');
+      const sanitizedClass = cheatsheetClass.replace(/[^a-z0-9]+/g, '');
+      const filename = `cheatsheet_${sanitizedSubject}_${sanitizedClass}_${dateStr}.pdf`;
+
+      // Detect mobile
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if (isMobile) {
+        try {
+          const arrayBuffer = await blob.arrayBuffer();
+          const base64 = btoa(
+            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+          );
+          const linkResponse = await fetch('/api/get-pdf-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pdfBuffer: base64, filename }),
+          });
+          if (linkResponse.ok) {
+            const { url } = await linkResponse.json();
+            window.open(url, '_blank');
+            setCheatsheetLoading(false);
+            return;
+          }
+        } catch (linkErr) {
+          console.log('Direct link method failed:', linkErr);
+        }
+        try {
+          const reader = new FileReader();
+          reader.onloadend = function() {
+            const base64data = reader.result as string;
+            const newWindow = window.open('', '_blank');
+            if (newWindow) newWindow.location.href = base64data;
+            else window.location.href = base64data;
+          };
+          reader.readAsDataURL(blob);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          setCheatsheetLoading(false);
+          return;
+        } catch {}
+      }
+
+      // Desktop download
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 100);
+    } catch (err: any) {
+      setCheatsheetError(err.message || 'PDF download failed');
+    } finally {
+      setCheatsheetLoading(false);
+    }
+  };
+
+  const handleResetCheatsheet = () => {
+    setCheatsheetFile(null);
+    setCheatsheetLatex('');
+    setCheatsheetComplete(false);
+    setCheatsheetError('');
+    setCheatsheetProgress(0);
+    setCheatsheetTokenUsage(null);
+    setActiveFeature(null);
+    setStarted(false);
   };
 
   const handleDownloadPDF = async (includeSolutions: boolean = true) => {
@@ -660,7 +926,7 @@ export default function Home() {
           <h1 className="text-2xl md:text-4xl font-bold mb-1 flex items-center gap-3">
             <span>📚</span> STUDYBUDDY
           </h1>
-          <p className="text-xs md:text-sm opacity-90">AI-Powered Question Generator</p>
+          <p className="text-xs md:text-sm opacity-90">AI-Powered Study Assistant</p>
         </div>
       </header>
 
@@ -671,14 +937,24 @@ export default function Home() {
             <div className="card p-8 md:p-12 text-center space-y-8">
               <div className="space-y-4">
                 <h2 className="text-3xl md:text-5xl font-bold text-gray-800">Welcome</h2>
-                <p className="text-base md:text-lg text-gray-600">Create Question Paper from your Textbook Instantly</p>
+                <p className="text-base md:text-lg text-gray-600">Your AI-Powered Study Companion</p>
               </div>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
                 <button
-                  onClick={() => setStarted(true)}
-                  className="bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold py-4 px-8 rounded-xl hover:shadow-lg transition-all transform hover:scale-105 text-lg md:text-xl"
+                  onClick={() => { setStarted(true); setActiveFeature('questions'); }}
+                  className="bg-gradient-to-r from-blue-600 to-sky-500 text-white font-bold py-5 px-6 rounded-xl hover:shadow-lg transition-all transform hover:scale-105 text-base md:text-lg space-y-2"
                 >
-                  Get Started →
+                  <div className="text-3xl">📝</div>
+                  <div>Generate Questions</div>
+                  <div className="text-xs font-normal opacity-80">Create question papers from textbooks</div>
+                </button>
+                <button
+                  onClick={() => { setStarted(true); setActiveFeature('cheatsheet'); }}
+                  className="bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-5 px-6 rounded-xl hover:shadow-lg transition-all transform hover:scale-105 text-base md:text-lg space-y-2"
+                >
+                  <div className="text-3xl">📋</div>
+                  <div>Cheatsheet</div>
+                  <div className="text-xs font-normal opacity-80">Quick revision notes & formulas</div>
                 </button>
               </div>
             </div>
@@ -686,7 +962,7 @@ export default function Home() {
             {/* Feature Highlights Banner */}
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-6 md:p-8 shadow-lg">
               <h3 className="text-xl md:text-2xl font-bold text-green-800 mb-6 text-center">✨ Study Buddy Features</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white/60 backdrop-blur rounded-lg p-5 border border-green-200">
                   <div className="text-3xl mb-2">📚</div>
                   <h4 className="font-bold text-gray-800 mb-2">All Chapters</h4>
@@ -702,12 +978,273 @@ export default function Home() {
                   <h4 className="font-bold text-gray-800 mb-2">Full Solutions</h4>
                   <p className="text-sm text-gray-700"><strong>Complete step-by-step solutions</strong> with detailed explanations included</p>
                 </div>
+                <div className="bg-white/60 backdrop-blur rounded-lg p-5 border border-orange-200">
+                  <div className="text-3xl mb-2">📋</div>
+                  <h4 className="font-bold text-gray-800 mb-2">Cheatsheet</h4>
+                  <p className="text-sm text-gray-700"><strong>Quick revision notes</strong>, formulas & key definitions grouped by chapter</p>
+                </div>
               </div>
             </div>
           </div>
+        ) : activeFeature === 'cheatsheet' ? (
+          /* ===== CHEATSHEET FEATURE ===== */
+          <div className="space-y-6 animate-fadeIn">
+            {!cheatsheetComplete ? (
+              <>
+                {/* Cheatsheet Config Card */}
+                <div className="card p-6 md:p-8 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-3">
+                      <span>📋</span> Cheatsheet Generator
+                    </h2>
+                    <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full">NEW</span>
+                  </div>
+                  <p className="text-sm text-gray-600">Upload your textbook PDF and get a <strong>comprehensive one-shot revision cheatsheet</strong> — every important topic, formula, equation, definition, and key fact organized chapter-wise. Designed so you can revise the entire syllabus in one read!</p>
+
+                  {/* Class & Subject Selection */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">📚 Class</label>
+                      <select
+                        value={cheatsheetClass}
+                        onChange={(e) => setCheatsheetClass(e.target.value)}
+                        className="input-field appearance-none cursor-pointer"
+                      >
+                        {CHEATSHEET_CLASSES.map(cls => (
+                          <option key={cls.value} value={cls.value}>{cls.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">📐 Subject</label>
+                      <select
+                        value={cheatsheetSubject}
+                        onChange={(e) => setCheatsheetSubject(e.target.value)}
+                        className="input-field appearance-none cursor-pointer"
+                      >
+                        {CHEATSHEET_SUBJECTS.map(sub => (
+                          <option key={sub.value} value={sub.value}>{sub.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* PDF Upload */}
+                  <div className="space-y-3">
+                    <h3 className="text-base md:text-lg font-bold text-gray-800">📄 Upload Textbook PDF</h3>
+                    <div
+                      className={`border-3 border-dashed rounded-xl p-8 md:p-12 text-center cursor-pointer transition-all ${
+                        isDraggingCheatsheet
+                          ? 'border-orange-500 bg-orange-100 scale-105'
+                          : 'border-orange-300 bg-orange-50 hover:bg-orange-100'
+                      }`}
+                      onDragOver={handleCheatsheetDragOver}
+                      onDragLeave={handleCheatsheetDragLeave}
+                      onDrop={handleCheatsheetDrop}
+                      onClick={() => cheatsheetFileInputRef.current?.click()}
+                    >
+                      <div className="text-5xl md:text-6xl mb-4">📄</div>
+                      <p className="text-base md:text-lg text-gray-700 font-semibold mb-2">
+                        {cheatsheetFile ? <span className="text-orange-600">{cheatsheetFile.name}</span> : 'Drag PDF or click to Upload'}
+                      </p>
+                      <p className="text-xs md:text-sm text-red-600 font-semibold">Max 7 MB</p>
+                      <input
+                        ref={cheatsheetFileInputRef}
+                        type="file"
+                        accept="application/pdf"
+                        onChange={handleCheatsheetFileChange}
+                        className="hidden"
+                      />
+                    </div>
+                  </div>
+
+                  {/* What You'll Get */}
+                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 rounded-lg p-4 space-y-3">
+                    <p className="text-sm font-bold text-amber-800">📌 What Your Cheatsheet Will Include:</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-amber-900">
+                      <div className="flex gap-2"><span>✓</span> <span><strong>Every important topic</strong> explained clearly per chapter</span></div>
+                      <div className="flex gap-2"><span>✓</span> <span><strong>All definitions & terms</strong> from the textbook</span></div>
+                      <div className="flex gap-2"><span>✓</span> <span><strong>Complete formula/equation bank</strong> (for STEM)</span></div>
+                      <div className="flex gap-2"><span>✓</span> <span><strong>Year-wise event timelines</strong> (for History)</span></div>
+                      <div className="flex gap-2"><span>✓</span> <span><strong>All chemical equations</strong> grouped by type (Chemistry)</span></div>
+                      <div className="flex gap-2"><span>✓</span> <span><strong>Comparison tables</strong> & classification charts</span></div>
+                      <div className="flex gap-2"><span>✓</span> <span><strong>Key points marked (IMP)</strong> for exam focus</span></div>
+                      <div className="flex gap-2"><span>✓</span> <span><strong>Quick revision bullets</strong> for last-minute study</span></div>
+                    </div>
+                  </div>
+
+                  {/* Generate Button */}
+                  <button
+                    type="button"
+                    onClick={handleGenerateCheatsheet}
+                    disabled={!cheatsheetFile || cheatsheetLoading}
+                    className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold py-4 md:py-5 rounded-xl text-base md:text-lg flex items-center justify-center gap-3 transition-all disabled:opacity-50"
+                  >
+                    {cheatsheetLoading ? (
+                      <>
+                        <span className="inline-block w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></span>
+                        Generating Cheatsheet...
+                      </>
+                    ) : (
+                      <>
+                        <span>📋</span> Generate Cheatsheet
+                      </>
+                    )}
+                  </button>
+
+                  {/* Back Button */}
+                  <button
+                    onClick={handleResetCheatsheet}
+                    className="text-gray-500 hover:text-gray-700 text-sm font-semibold text-center w-full mt-2"
+                  >
+                    ← Back to Start
+                  </button>
+                </div>
+
+                {/* Error */}
+                {cheatsheetError && (
+                  <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 md:p-6 shadow-md animate-fadeIn flex items-start gap-4">
+                    <span className="text-3xl">⚠️</span>
+                    <div className="flex-1">
+                      <p className="text-red-700 text-sm md:text-base">{cheatsheetError}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Loading Indicator */}
+                {cheatsheetLoading && (
+                  <div className="card p-12 text-center space-y-8 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 border-2 border-orange-300 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-400 animate-pulse"></div>
+                    <div className="space-y-6 relative z-10">
+                      <div className="inline-block">
+                        <div className="relative w-24 h-24 mx-auto">
+                          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-orange-600 border-r-amber-600 animate-spin" style={{ animationDuration: '2s' }}></div>
+                          <div className="absolute inset-2 rounded-full border-4 border-transparent border-b-yellow-500 border-l-orange-500 animate-spin" style={{ animationDuration: '3s', animationDirection: 'reverse' }}></div>
+                          <svg className="absolute inset-0 w-24 h-24" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#fed7aa" strokeWidth="3" />
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="url(#cheatsheetGradient)" strokeWidth="3"
+                              strokeDasharray={`${2 * Math.PI * 45}`}
+                              strokeDashoffset={`${2 * Math.PI * 45 * (1 - cheatsheetProgress / 100)}`}
+                              strokeLinecap="round"
+                              style={{ transition: 'stroke-dashoffset 0.3s ease' }}
+                            />
+                            <defs>
+                              <linearGradient id="cheatsheetGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#ea580c" />
+                                <stop offset="50%" stopColor="#d97706" />
+                                <stop offset="100%" stopColor="#ca8a04" />
+                              </linearGradient>
+                            </defs>
+                          </svg>
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xl font-bold bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 bg-clip-text text-transparent">{Math.round(cheatsheetProgress)}%</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <p className="text-lg font-bold bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 bg-clip-text text-transparent">Creating your cheatsheet...</p>
+                        <div className="min-h-16 flex items-center justify-center">
+                          <p className="text-orange-600 font-semibold italic text-base animate-pulse max-w-md">{currentQuote}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Cheatsheet Results */
+              <>
+                <div className="card p-6 md:p-8 bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-400 space-y-6">
+                  <div className="text-center space-y-4">
+                    <div className="text-6xl animate-bounce">📋</div>
+                    <h2 className="text-3xl md:text-4xl font-bold text-orange-700">Cheatsheet Ready!</h2>
+                    <p className="text-lg text-gray-700">Your comprehensive revision notes have been generated.</p>
+                  </div>
+
+                  {/* Token Usage */}
+                  {cheatsheetTokenUsage && (
+                    <div className="bg-white/60 rounded-xl p-4 border border-orange-200 max-w-xl mx-auto">
+                      <h3 className="text-sm font-bold text-gray-700 mb-3 text-center">📊 AI Token Usage</h3>
+                      <div className="grid grid-cols-3 gap-3 text-center text-xs">
+                        <div className="bg-orange-50 rounded-lg p-2 border border-orange-200">
+                          <p className="font-bold text-orange-700 text-lg">{cheatsheetTokenUsage.promptTokens.toLocaleString()}</p>
+                          <p className="text-gray-600">Input</p>
+                        </div>
+                        <div className="bg-amber-50 rounded-lg p-2 border border-amber-200">
+                          <p className="font-bold text-amber-700 text-lg">{cheatsheetTokenUsage.outputTokens.toLocaleString()}</p>
+                          <p className="text-gray-600">Output</p>
+                        </div>
+                        <div className="bg-yellow-50 rounded-lg p-2 border border-yellow-200">
+                          <p className="font-bold text-yellow-700 text-lg">{cheatsheetTokenUsage.totalTokens.toLocaleString()}</p>
+                          <p className="text-gray-600">Total</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Preview & Download */}
+                <div className="card p-6 md:p-8 space-y-6">
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-800">✅ Preview</h2>
+                  
+                  {/* LaTeX Preview */}
+                  <div className="border-2 border-orange-200 rounded-xl p-4 md:p-6 bg-white max-h-96 overflow-y-auto">
+                    <LatexPreview content={cheatsheetLatex} />
+                  </div>
+
+                  {/* Download Button */}
+                  <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-6 rounded-xl border-2 border-orange-200 space-y-4">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">📥 Download Cheatsheet</h3>
+                    <button
+                      onClick={handleDownloadCheatsheetPDF}
+                      disabled={cheatsheetLoading}
+                      className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold py-3 px-6 rounded-xl text-base flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                    >
+                      {cheatsheetLoading ? (
+                        <>
+                          <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          Preparing PDF...
+                        </>
+                      ) : (
+                        <>
+                          <span>📄</span> Download as PDF
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Generate Another */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                    <button
+                      onClick={handleResetCheatsheet}
+                      className="bg-gradient-to-r from-orange-600 to-amber-600 text-white font-bold py-3 px-8 rounded-xl hover:shadow-lg transition-all text-lg"
+                    >
+                      🔄 Generate Another Cheatsheet
+                    </button>
+                    <button
+                      onClick={() => { setShowFeedbackForm(true); setFeedbackSuccess(false); setFeedbackError(''); }}
+                      className="bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold py-3 px-8 rounded-xl hover:shadow-lg transition-all text-lg"
+                    >
+                      💬 Share Your Feedback
+                    </button>
+                  </div>
+                </div>
+
+                {/* Error */}
+                {cheatsheetError && (
+                  <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 md:p-6 shadow-md animate-fadeIn flex items-start gap-4">
+                    <span className="text-3xl">⚠️</span>
+                    <div className="flex-1">
+                      <p className="text-red-700 text-sm md:text-base">{cheatsheetError}</p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         ) : (
           <>
-            {/* Question Customizer - Shown for all flows */}
+            {/* Question Customizer - Shown for question generation flow */}
             <QuestionCustomizer 
               config={config} 
               onConfigChange={setConfig} 
@@ -820,6 +1357,7 @@ export default function Home() {
                   setLatexContent('');
                   setError('');
                   setStarted(false);
+                  setActiveFeature(null);
                 }}
                 className="text-gray-500 hover:text-gray-700 text-sm font-semibold text-center w-full mt-2"
               >
