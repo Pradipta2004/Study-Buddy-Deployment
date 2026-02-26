@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import QuestionCustomizer from '@/components/QuestionCustomizer';
 import LatexPreview from '@/components/LatexPreview';
 
@@ -145,6 +146,8 @@ export default function Home() {
   const [cheatsheetTokenUsage, setCheatsheetTokenUsage] = useState<{ promptTokens: number; outputTokens: number; totalTokens: number } | null>(null);
   const cheatsheetFileInputRef = useRef<HTMLInputElement>(null);
   const [isDraggingCheatsheet, setIsDraggingCheatsheet] = useState(false);
+  const [cheatsheetLanguage, setCheatsheetLanguage] = useState<'english' | 'hindi' | null>(null);
+  const router = useRouter();
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const [feedbackForm, setFeedbackForm] = useState({ name: '', studentClass: '', subject: '', suggestions: '' });
   const [feedbackLoading, setFeedbackLoading] = useState(false);
@@ -799,6 +802,7 @@ export default function Home() {
     setCheatsheetError('');
     setCheatsheetProgress(0);
     setCheatsheetTokenUsage(null);
+    setCheatsheetLanguage(null);
     setActiveFeature(null);
     setStarted(false);
   };
@@ -989,7 +993,40 @@ export default function Home() {
         ) : activeFeature === 'cheatsheet' ? (
           /* ===== CHEATSHEET FEATURE ===== */
           <div className="space-y-6 animate-fadeIn">
-            {!cheatsheetComplete ? (
+            {/* Language Selector */}
+            {!cheatsheetLanguage && !cheatsheetComplete ? (
+              <div className="card p-6 md:p-10 space-y-8 text-center">
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">📋 Cheatsheet Generator</h2>
+                  <p className="text-gray-500 text-sm">Choose the language for your cheatsheet</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-xl mx-auto">
+                  <button
+                    onClick={() => setCheatsheetLanguage('english')}
+                    className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-orange-300 bg-orange-50 hover:bg-orange-100 hover:border-orange-500 transition-all shadow-sm"
+                  >
+                    <span className="text-4xl">🇬🇧</span>
+                    <span className="text-xl font-bold text-gray-800">English</span>
+                    <span className="text-xs text-gray-500">LaTeX PDF cheatsheet</span>
+                  </button>
+                  <button
+                    onClick={() => router.push('/hindi-cheatsheet')}
+                    className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-blue-300 bg-blue-50 hover:bg-blue-100 hover:border-blue-500 transition-all shadow-sm"
+                  >
+                    <span className="text-4xl">🇮🇳</span>
+                    <span className="text-xl font-bold text-gray-800">हिंदी</span>
+                    <span className="text-xs text-gray-500">Hindi text cheatsheet</span>
+                  </button>
+                </div>
+                <button
+                  onClick={handleResetCheatsheet}
+                  className="text-gray-400 hover:text-gray-600 text-sm mt-2"
+                >
+                  ← Back
+                </button>
+              </div>
+            ) : null}
+            {cheatsheetLanguage === 'english' && !cheatsheetComplete ? (
               <>
                 {/* Cheatsheet Config Card */}
                 <div className="card p-6 md:p-8 space-y-6">
@@ -1113,7 +1150,7 @@ export default function Home() {
                 )}
 
                 {/* Loading Indicator */}
-                {cheatsheetLoading && (
+                {cheatsheetLoading && cheatsheetLanguage === 'english' && (
                   <div className="card p-12 text-center space-y-8 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 border-2 border-orange-300 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-400 animate-pulse"></div>
                     <div className="space-y-6 relative z-10">
@@ -1152,7 +1189,8 @@ export default function Home() {
                   </div>
                 )}
               </>
-            ) : (
+            ) : null}
+            {cheatsheetComplete ? (
               /* Cheatsheet Results */
               <>
                 <div className="card p-6 md:p-8 bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-400 space-y-6">
@@ -1241,7 +1279,7 @@ export default function Home() {
                   </div>
                 )}
               </>
-            )}
+            ) : null}
           </div>
         ) : (
           <>
