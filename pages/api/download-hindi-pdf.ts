@@ -38,6 +38,30 @@ function sanitizeLatex(latex: string): string {
   sanitized = sanitized.replace(/\\begin\{multicols\}\{[^}]*\}/g, '');
   sanitized = sanitized.replace(/\\end\{multicols\}/g, '');
 
+  // === FIX FONT SETUP: Replace polyglossia + Noto Sans Devanagari with FreeSerif ===
+  // Remove polyglossia and old font commands that cause boxes for English text
+  sanitized = sanitized.replace(/\\usepackage\{polyglossia\}\s*/g, '');
+  sanitized = sanitized.replace(/\\setdefaultlanguage\{[^}]*\}\s*/g, '');
+  sanitized = sanitized.replace(/\\setotherlanguage\{[^}]*\}\s*/g, '');
+  sanitized = sanitized.replace(/\\newfontfamily\\hindifont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
+  sanitized = sanitized.replace(/\\newfontfamily\\englishfont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
+  sanitized = sanitized.replace(/\\newfontfamily\\devanagarifont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
+  // Replace any \setmainfont with FreeSerif (handles both Latin + Devanagari)
+  sanitized = sanitized.replace(/\\setmainfont\{[^}]*\}(\[[^\]]*\])?/g, '\\setmainfont{FreeSerif}');
+  // Remove polyglossia language-switch commands from body text
+  sanitized = sanitized.replace(/\\textenglish\{([^}]*)\}/g, '$1');
+  sanitized = sanitized.replace(/\\texthi(ndi)?\{([^}]*)\}/g, '$2');
+  sanitized = sanitized.replace(/\\begin\{english\}/g, '');
+  sanitized = sanitized.replace(/\\end\{english\}/g, '');
+
+  // Ensure \usepackage{fontspec} and \setmainfont exist
+  if (!sanitized.includes('\\usepackage{fontspec}')) {
+    sanitized = sanitized.replace(/\\documentclass(\[[^\]]*\])?\{[^}]*\}/, '$&\n\\usepackage{fontspec}\n\\setmainfont{FreeSerif}');
+  }
+  if (!sanitized.includes('\\setmainfont')) {
+    sanitized = sanitized.replace(/\\usepackage\{fontspec\}/, '$&\n\\setmainfont{FreeSerif}');
+  }
+
   // Ensure document has \end{document}
   if (sanitized.includes('\\begin{document}') && !sanitized.includes('\\end{document}')) {
     sanitized += '\n\\end{document}\n';

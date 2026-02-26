@@ -220,12 +220,7 @@ Generate a COMPLETE, COMPILABLE LaTeX document using this EXACT preamble:
 
 \\documentclass[10pt,a4paper]{article}
 \\usepackage{fontspec}
-\\usepackage{polyglossia}
-\\setdefaultlanguage{hindi}
-\\setotherlanguage{english}
-\\newfontfamily\\hindifont{Noto Sans Devanagari}[Script=Devanagari]
-\\newfontfamily\\englishfont{Latin Modern Roman}
-\\setmainfont{Noto Sans Devanagari}[Script=Devanagari]
+\\setmainfont{FreeSerif}
 \\usepackage[margin=1.5cm]{geometry}
 \\usepackage{amsmath,amssymb}
 \\usepackage{enumitem}
@@ -322,11 +317,12 @@ FORMATTING RULES:
 8. Ensure EVERY \\begin{} has a matching \\end{}
 9. Ensure EVERY { has a matching }
 10. Use \\newpage between chapters
-11. For English text within Hindi content, you can use it directly — polyglossia handles it
-12. For chemical equations, use LaTeX math: $\\text{reactant} \\rightarrow \\text{product}$
-13. Do NOT use \\ce{} command (mhchem package is NOT loaded)
-14. Do NOT use tcolorbox, multicol, or any packages NOT in the preamble
-15. Make the document LONG and DETAILED — 40-80 pages when compiled
+11. English text mixed with Hindi is fine — FreeSerif font supports BOTH Latin and Devanagari characters
+12. Do NOT use \\textenglish{}, \\texthindi{}, or any polyglossia commands
+13. For chemical equations, use LaTeX math: $\\text{reactant} \\rightarrow \\text{product}$
+14. Do NOT use \\ce{} command (mhchem package is NOT loaded)
+15. Do NOT use tcolorbox, multicol, polyglossia, or any packages NOT in the preamble
+16. Make the document LONG and DETAILED — 40-80 pages when compiled
 
 IMPORTANT: Start directly with \\documentclass and end with \\end{document}.
 Do NOT wrap output in markdown code blocks.
@@ -339,12 +335,7 @@ function wrapInLatexDocument(content: string, subject: string, studentClass: str
 
   return `\\documentclass[10pt,a4paper]{article}
 \\usepackage{fontspec}
-\\usepackage{polyglossia}
-\\setdefaultlanguage{hindi}
-\\setotherlanguage{english}
-\\newfontfamily\\hindifont{Noto Sans Devanagari}[Script=Devanagari]
-\\newfontfamily\\englishfont{Latin Modern Roman}
-\\setmainfont{Noto Sans Devanagari}[Script=Devanagari]
+\\setmainfont{FreeSerif}
 \\usepackage[margin=1.5cm]{geometry}
 \\usepackage{amsmath,amssymb}
 \\usepackage{enumitem}
