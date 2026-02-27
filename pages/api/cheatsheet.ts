@@ -217,6 +217,13 @@ For EACH chapter, you MUST also include:
 - Mark frequently-asked-in-exams reactions with \\textbf{(FAQ)}
 - Include conditions above/below the arrow (catalyst, temperature, pressure)
 
+** BALANCING TRICKS & SHORTCUTS **
+- Equation balancing shortcuts
+- IUPAC naming quick rules
+- Color test memory aids (e.g., "Brown ring test for nitrate")
+- pH calculation shortcuts
+- Valency tricks
+
 ** PERIODIC TABLE TRENDS ** (if applicable to chapter)
 - Trends in properties across periods and down groups
 - Key values (electronegativity, ionization energy, electron affinity)
@@ -238,14 +245,24 @@ For EACH chapter, you MUST also include:
 - For each formula: equation + what each symbol means + SI unit
 - Mark board-exam-important formulas with \\textbf{(IMP)}
 - Include derived formulas and alternate forms
+- **WHEN TO USE WHICH FORMULA** — selection guide for problem-solving
+
+** PROBLEM-SOLVING TIPS **
+- Sign conventions for the chapter
+- Common mistakes and how to avoid them
+- Quick approximation methods
+- Free-body diagram tips (if applicable)
+- Unit conversion shortcuts
 
 ** LAWS & PRINCIPLES **
 - Statement of every law/principle in the chapter (word-for-word from textbook)
 - Mathematical form of each law
+- Conditions/limitations of each law
 
 ** KEY DIAGRAMS **
 - Describe important diagrams (circuit diagrams, ray diagrams, force diagrams) in words
 - List what to label in each diagram
+- Common diagram mistakes in exams
 `;
   }
 
@@ -262,13 +279,23 @@ For EACH chapter, you MUST also include:
 - Provide conditions/domain restrictions for each formula
 - Mark frequently used formulas with \\textbf{(IMP)}
 
+** CALCULATION TRICKS & SHORTCUTS **
+- Quick calculation methods (mental math tricks, pattern shortcuts)
+- Formula selection guide — which formula to use when
+- Pattern recognition tips for typical question types
+- Memory aids for complex formulas
+- Step-saving techniques
+
 ** THEOREM STATEMENTS **
 - State every theorem with proper mathematical notation
 - Include corollaries and special cases
+- Conditions under which theorem applies
 
 ** COMMON MISTAKES TO AVOID **
 - List 3-5 common calculation errors for the chapter
 - Sign errors, domain errors, unit errors
+- Typical conceptual misunderstandings
+- "Watch out for" points in exam questions
 `;
   }
 
@@ -368,9 +395,14 @@ For EACH chapter, you MUST also include:
     case 'stem':
       return `
 STEM-SPECIFIC REQUIREMENTS:
-- Extract ALL formulas, equations, and mathematical expressions (use proper LaTeX math mode: $...$ for inline, \\[ \\] for display)
+- **FORMULAS ARE PRIORITY**: Extract ALL formulas, equations, and mathematical expressions (use proper LaTeX math mode: $...$ for inline, \\[ \\] for display)
 - Include derivation steps for key formulas (brief outline, not full derivation)
 - List ALL important constants and their standard values with units
+- **TRICKS & SHORTCUTS**: Include calculation shortcuts, approximation techniques, quick-check methods
+- **PROBLEM-SOLVING TIPS**: Common mistakes, sign conventions, unit conversions
+- For Math: Include pattern recognition tips, formula selection guidelines, typical question types
+- For Physics: When to apply which law/formula, free-body diagram tips
+- For Chemistry: Balancing tricks, IUPAC naming shortcuts, color-test memory aids
 - Include units, dimensions, and SI notation where applicable
 - Describe important diagrams (what the diagram shows, key labels)
 - Include ALL important reactions/processes/algorithms
@@ -378,6 +410,7 @@ STEM-SPECIFIC REQUIREMENTS:
 - Highlight frequently-asked formulas with \\textbf{(FAQ)} or \\textbf{(IMP)}
 - Group related formulas together so students see connections
 - Include special cases and boundary conditions for formulas
+- **SKIP comparison tables** unless comparing different derivation methods or solution approaches
 - 5 MARKS NOTES: For each chapter write 2-4 exam-ready notes on derivations, explain-with-example type topics, prove-that problems, or "write the principle and applications" style answers
 ${extraSections}`;
     case 'language':
@@ -464,10 +497,20 @@ A student should be able to:
 - Use this as their ONLY revision material the night before the exam
 
 ═══════════════════════════════════════════════════
+⚙️ BE SMART ABOUT SUBJECT-SPECIFIC NEEDS:
+═══════════════════════════════════════════════════
+
+- **STEM subjects (Math, Physics, Chemistry)**: PRIORITIZE formulas, tricks, shortcuts, problem-solving tips. SKIP comparison tables unless comparing solution methods.
+- **Math specifically**: Focus on formulas, identities, theorems, calculation shortcuts, pattern recognition. Comparison tables are NOT useful here.
+- **History/Geography**: PRIORITIZE timelines, dates, cause-effect chains, map points. Comparison tables ARE useful.
+- **Commerce**: Both formulas AND comparison tables are important.
+- **Languages**: Focus on grammar, formats, literary devices. NO formulas needed.
+
+═══════════════════════════════════════════════════
 CONTENT TO EXTRACT FOR EACH CHAPTER:
 ═══════════════════════════════════════════════════
 
-For EACH chapter, include ALL of these sections (skip ONLY if truly not applicable):
+For EACH chapter, include ALL of these sections (skip ONLY if truly not applicable to the subject):
 
 ** KEY TOPICS & CONCEPTS **
 - List EVERY important topic and concept (3-5 line explanation each — not just names)
@@ -480,15 +523,17 @@ For EACH chapter, include ALL of these sections (skip ONLY if truly not applicab
 - Use exact textbook wording where possible
 - Format: \\textbf{Term}: Definition
 
-** FORMULAS, EQUATIONS & EXPRESSIONS ** (for STEM/Commerce)
+** FORMULAS, EQUATIONS & EXPRESSIONS ** (for STEM/Commerce — CRITICAL SECTION)
 - List EVERY formula in the chapter — do NOT skip any
 - For each formula: the equation + what each variable means + units
-- Group related formulas together
+- Group related formulas together (e.g., all kinematics formulas together)
 - Include derived forms and rearranged versions
 - Include conditions under which each formula applies
-- For chemistry: ALL balanced chemical equations with conditions
-- For physics: ALL laws stated mathematically
-- For math: ALL theorems, identities, and properties
+- For Math: Include tricks for quick calculations, pattern shortcuts
+- For Physics: When to use which formula, common sign conventions
+- For Chemistry: ALL balanced chemical equations with conditions (temperature, catalyst)
+- For Math: ALL theorems, identities, properties with conditions
+- Include "formula selection guide" — which formula to use when
 
 ** KEY FACTS & POINTS TO REMEMBER **
 - 10-15 must-know facts per chapter
@@ -498,17 +543,19 @@ For EACH chapter, include ALL of these sections (skip ONLY if truly not applicab
 - Exceptions to rules
 - Special cases and boundary conditions
 
-** IMPORTANT TABLES & COMPARISONS **
-- Differences between similar concepts (minimum 4-5 rows per table)
-- Classification tables with all categories
-- Summary tables grouping related items
-- Timeline tables for history (Year | Event | Significance)
-- Property comparison tables for science
+** IMPORTANT TABLES & COMPARISONS ** (subject-specific)
+- For STEM: Skip comparison tables unless comparing different methods/approaches
+- For Commerce/Humanities: Differences between similar concepts (minimum 4-5 rows per table)
+- For Commerce: Classification tables with all categories (types of accounts, companies, etc.)
+- For History: Timeline tables (Year | Event | Significance)
+- For Biology: Classification and property comparison tables
 
 ** QUICK REVISION BULLETS **
 - 8-12 bullet points per chapter for ABSOLUTE last-minute revision
 - The "if you read ONLY this section" emergency notes
-- Include mnemonics or memory tricks if applicable
+- For STEM: Include calculation tricks, shortcuts, common mistakes to avoid
+- For Math: Pattern recognition tips, formula selection guidelines
+- For all subjects: Include mnemonics or memory tricks from the textbook
 - Mark the single most important point with \\textbf{MOST IMPORTANT}
 
 ** 5 MARKS IMPORTANT NOTES ** (CRITICAL SECTION)

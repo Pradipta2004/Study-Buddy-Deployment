@@ -95,45 +95,63 @@ function getSubjectSpecificHindi(subject: string, type: string): string {
   if (subject === 'chemistry' || subject === 'physical-science') {
     return `
 रसायन विज्ञान के लिए अतिरिक्त अनुभाग:
-- प्रत्येक अध्याय में सभी रासायनिक समीकरण (संतुलित रूप में) अलग से सूचीबद्ध करें
-- अभिक्रिया के प्रकार (संयोजन, वियोजन, विस्थापन, आदि) स्पष्ट करें
-- महत्वपूर्ण नियम और सिद्धांत
-- परीक्षा में बार-बार पूछे जाने वाले समीकरणों को **(परीक्षा महत्वपूर्ण)** लिखें`;
+- प्रत्येक अध्याय में PDF से सभी रासायनिक समीकरण (संतुलित रूप में) अलग से सूचीबद्ध करें
+- पाठ्यपुस्तक में दिए गए अभिक्रिया के प्रकार (संयोजन, वियोजन, विस्थापन, आदि) स्पष्ट करें
+- समीकरण संतुलन की tricks और shortcuts (यदि PDF में दिए गए हैं)
+- रंग परीक्षण (color tests) याद रखने के लिए memory aids
+- IUPAC नामकरण की shortcuts
+- PDF में उल्लिखित महत्वपूर्ण नियम और सिद्धांत (exact statements)
+- परीक्षा में बार-बार पूछे जाने वाले समीकरणों (जो अभ्यास प्रश्नों में आते हैं) को **(परीक्षा महत्वपूर्ण)** लिखें
+- अभिक्रिया की शर्तें (तापमान, दाब, उत्प्रेरक) जैसे PDF में दी गई हैं
+- तुलनात्मक तालिका तभी जब textbook में दो अवधारणाओं की तुलना हो`;
   }
 
   if (subject === 'physics') {
     return `
 भौतिक विज्ञान के लिए अतिरिक्त अनुभाग:
-- प्रत्येक अध्याय के सभी सूत्र एक साथ, प्रत्येक चर का अर्थ और SI इकाई सहित
-- सभी नियम/सिद्धांत उनके गणितीय रूप में
-- महत्वपूर्ण आरेखों का विवरण (क्या बनाना है, क्या label करना है)`;
+- प्रत्येक अध्याय से PDF के सभी सूत्र एक साथ, प्रत्येक चर का अर्थ और SI इकाई सहित
+- कौन सा सूत्र कब apply करें — formula selection guide
+- सामान्य sign conventions और unit conversions
+- Free-body diagram बनाने के tips (यदि PDF में दिए गए हैं)
+- गणना shortcuts और approximation techniques
+- पाठ्यपुस्तक में दिए गए सभी नियम/सिद्धांत उनके गणितीय रूप में (exact statements)
+- PDF में दिखाए गए महत्वपूर्ण आरेखों का विवरण (क्या बनाना है, क्या label करना है)
+- यदि पाठ्यपुस्तक में व्युत्पत्ति (derivation) दी गई है तो उसके मुख्य चरण
+- सामान्य गलतियाँ और उनसे कैसे बचें (यदि textbook में mentioned हैं)
+- तुलनात्मक तालिका केवल तभी जब different methods की तुलना हो`;
   }
 
   if (subject === 'mathematics' || subject === 'statistics') {
     return `
 गणित के लिए अतिरिक्त अनुभाग:
-- सभी सूत्र, सर्वसमिकाएं, प्रमेय एक साथ
-- त्रिकोणमितीय सर्वसमिकाएं, बीजगणितीय सर्वसमिकाएं सब
-- प्रत्येक प्रमेय की शर्तें और विशेष स्थितियां
-- सामान्य गलतियाँ जो छात्र करते हैं`;
+- अध्याय से सभी सूत्र, सर्वसमिकाएं, प्रमेय एक साथ (जैसे PDF में दिए गए हैं)
+- त्रिकोणमितीय सर्वसमिकाएं, बीजगणितीय सर्वसमिकाएं सब (PDF में mention की गई)
+- त्वरित गणना के लिए tricks और shortcuts (जैसे squares, cubes के pattern)
+- Pattern recognition tips — किस प्रकार के प्रश्न में कौन सी विधि use करें
+- Formula selection guide — कौन सा formula कब apply करें
+- प्रत्येक प्रमेय की शर्तें और विशेष स्थितियां (पाठ्यपुस्तक के अनुसार)
+- यदि पाठ्यपुस्तक में "common mistakes" या "note" boxes हैं तो वे include करें
+- तुलनात्मक तालिका केवल तभी जब दो solution methods की तुलना हो, अन्यथा skip करें
+- गणित में formulas और tricks को priority दें, न कि comparison tables को`;
   }
 
   if (subject === 'history' || subject === 'social-science') {
     return `
 इतिहास के लिए अतिरिक्त अनुभाग:
-- प्रत्येक अध्याय के लिए वर्षवार घटना तालिका (वर्ष | घटना | महत्व)
-- महत्वपूर्ण व्यक्तित्व: नाम | भूमिका | योगदान
-- कारण → घटना → प्रभाव श्रृंखला
-- महत्वपूर्ण संधियाँ, अधिनियम, आंदोलन (वर्ष + मुख्य बिंदु)`;
+- प्रत्येक अध्याय के लिए PDF से वर्षवार घटना तालिका (वर्ष | घटना | महत्व)
+- पाठ्यपुस्तक में उल्लिखित महत्वपूर्ण व्यक्तित्व: नाम | भूमिका | योगदान
+- PDF में बताई गई कारण → घटना → प्रभाव श्रृंखला
+- पाठ्यपुस्तक में दी गई महत्वपूर्ण संधियाँ, अधिनियम, आंदोलन (वर्ष + मुख्य बिंदु)
+- अगर timeline या chronology box है तो use करें`;
   }
 
   if (subject === 'biology' || subject === 'life-science') {
     return `
 जीव विज्ञान के लिए अतिरिक्त अनुभाग:
-- जैविक प्रक्रियाओं के चरण-दर-चरण विवरण
-- महत्वपूर्ण आरेखों का विवरण (भाग और कार्य)
-- रोग/विकार: नाम | कारण | लक्षण | उपचार (तालिका में)
-- वैज्ञानिक नाम और वर्गीकरण`;
+- पाठ्यपुस्तक में समझाई गई जैविक प्रक्रियाओं के चरण-दर-चरण विवरण
+- PDF में दिखाए गए महत्वपूर्ण आरेखों का विवरण (भाग और कार्य)
+- यदि chapter में diseases/disorders दिए गए हैं: नाम | कारण | लक्षण | उपचार (तालिका में)
+- पाठ्यपुस्तक में mention किए गए वैज्ञानिक नाम और वर्गीकरण`;
   }
 
   // default: nothing extra
@@ -148,67 +166,112 @@ function buildHindiPrompt(subject: string, studentClass: string): string {
   const type = getSubjectType(subject);
   const extra = getSubjectSpecificHindi(subject, type);
 
-  return `You are an expert academic content creator. Analyze this ENTIRE textbook PDF and create a COMPREHENSIVE cheatsheet in HINDI (Devanagari script).
+  return `You are an expert academic content creator and exam preparation specialist. Your job is to analyze this ENTIRE textbook PDF from cover to cover and create the MOST COMPREHENSIVE, DETAILED exam cheatsheet possible in HINDI (Devanagari script).
 
 SUBJECT: ${hindiSubject} (${englishSubject})
 CLASS: ${classLabel} (${classLabelEn})
 
 ══════════════════════════════════════════
-MANDATORY RULES:
+MANDATORY RULES (VIOLATING ANY = FAILURE):
 ══════════════════════════════════════════
 
-1. ALL text content MUST be written in HINDI (Devanagari script). Technical terms can have English in parentheses.
-2. Cover EVERY SINGLE chapter from the PDF — do NOT skip any.
-3. Each chapter MUST have at least 15-25 bullet points across all sections.
-4. Extract content ONLY from this PDF — do NOT add external information.
-5. ALL math formulas MUST be in LaTeX math mode: $...$ for inline, \\[ \\] for display.
-6. The output MUST be a COMPLETE, COMPILABLE LaTeX document for LuaLaTeX.
+1. **TEXTBOOK-ONLY**: Extract content ONLY from this PDF. Do NOT add external information. Do NOT use general knowledge.
+2. **USE EXACT CONTENT**: Use the textbook's exact definitions, statements, and explanations (translated to Hindi). Do NOT paraphrase unnecessarily.
+3. **ALL CHAPTERS**: Cover EVERY SINGLE chapter from the PDF in textbook order — do NOT skip even one chapter.
+4. **CHAPTER-WISE ORGANIZATION**: Group ALL content chapter by chapter exactly as they appear in the textbook.
+5. **BE EXHAUSTIVE**: This cheatsheet should be SO comprehensive that a student reading ONLY this can revise the entire syllabus before the exam.
+6. **DO NOT SUMMARIZE TOO BRIEFLY**: Each chapter section should be DETAILED — include every important point from the PDF.
+7. **MINIMUM CONTENT**: Each chapter MUST have at least 15-25 bullet points across all sections. Short chapters = at least 10 points.
+8. **REAL CONTENT**: Every bullet point must contain actual useful information from the PDF, not vague placeholders.
+9. **ALL text content MUST be written in HINDI (Devanagari script)**. Technical terms can have English in parentheses.
+10. **ALL math formulas MUST be in LaTeX math mode**: $...$ for inline, \\[ \\] for display.
+11. The output MUST be a COMPLETE, COMPILABLE LaTeX document for LuaLaTeX.
 
 ══════════════════════════════════════════
-GOAL: One-shot revision in Hindi
+🎯 GOAL: "ONE-SHOT" REVISION IN HINDI
 ══════════════════════════════════════════
 
 A student should be able to:
-- Revise the ENTIRE textbook by reading this cheatsheet (1--2 hours)
-- Find EVERY important formula/definition in one place
+- Read this cheatsheet in 1-2 hours and feel they've revised the ENTIRE textbook
+- Find EVERY important formula/definition from the PDF in one place
+- See ALL key facts, dates, events, processes from the textbook organized clearly
 - Use the 5-mark notes directly in exams
+- Trust that EVERYTHING in this cheatsheet comes FROM the PDF, nothing extra
 
 ══════════════════════════════════════════
-CONTENT STRUCTURE FOR EACH CHAPTER:
+⚙️ विषय-विशिष्ट आवश्यकताओं के अनुसार स्मार्ट बनें:
 ══════════════════════════════════════════
 
-For EACH chapter include ALL of these:
+- **STEM विषय (गणित, भौतिकी, रसायन)**: सूत्र, tricks, shortcuts, problem-solving tips को PRIORITY दें। तुलनात्मक तालिका तभी बनाएं जब solution methods की तुलना हो।
+- **गणित विशेष रूप से**: सूत्र, सर्वसमिकाएं, प्रमेय, calculation shortcuts, pattern recognition पर focus करें। तुलनात्मक तालिका यहाँ उपयोगी नहीं।
+- **इतिहास/भूगोल**: timeline, तिथियां, कारण-प्रभाव chains, map points को PRIORITY दें। तुलनात्मक तालिका उपयोगी है।
+- **वाणिज्य**: सूत्र और तुलनात्मक तालिका दोनों महत्वपूर्ण हैं।
+- **भाषा विषय**: grammar, formats, literary devices पर focus करें। कोई सूत्र नहीं चाहिए।
+
+══════════════════════════════════════════
+CONTENT TO EXTRACT FOR EACH CHAPTER:
+══════════════════════════════════════════
+
+📌 CRITICAL: Extract content FROM THE PDF ONLY. Read each chapter carefully and include what's actually written there.
+
+For EACH chapter, include ALL of these sections (skip ONLY if truly not applicable to the subject or not in the PDF):
 
 ** मुख्य विषय एवं अवधारणाएं (Key Topics & Concepts) **
-- Every important topic with 3-4 line explanation in Hindi
-- Subtopics and their relationships
+- List EVERY important topic and concept mentioned in this chapter of the PDF
+- 3-5 line explanation each in Hindi (translate from the textbook explanation)
+- Explain the core idea clearly enough that a student understands it
+- Include subtopics and their relationships as described in the PDF
 
 ** महत्वपूर्ण परिभाषाएं (Important Definitions) **
-- Every term: \\textbf{शब्द (English Term):} परिभाषा...
-- All technical terms, scientific terms
+- EVERY important term defined in the chapter with its textbook definition (in Hindi)
+- Use exact textbook wording translated to Hindi where possible
+- All technical terms, scientific terms, named concepts from the PDF
+- Format: \\textbf{शब्द (English Term):} परिभाषा...
 
-** सूत्र एवं समीकरण (Formulas & Equations) ** (for STEM/Commerce)
-- ALL formulas in proper LaTeX math mode
-- For each formula: equation + meaning of each variable + unit
-- Mark important ones with \\textbf{(परीक्षा महत्वपूर्ण)}
+** सूत्र एवं समीकरण (Formulas & Equations) ** (STEM/वाणिज्य के लिए — महत्वपूर्ण खंड)
+- ALL formulas and equations mentioned in this chapter of the PDF (in proper LaTeX math mode)
+- प्रत्येक सूत्र के लिए: समीकरण + प्रत्येक चर का अर्थ (हिंदी में) + इकाई
+- संबंधित सूत्रों को एक साथ group करें (जैसे सभी गति के सूत्र एक साथ)
+- For chemistry: ALL balanced chemical equations from the chapter with conditions (तापमान, उत्प्रेरक)
+- For physics: कौन सा सूत्र कब use करें, sign conventions
+- For math: त्वरित गणना के लिए tricks, shortcuts, pattern की पहचान
+- सूत्र चयन गाइड — किस स्थिति में कौन सा सूत्र use करें
+- यदि PDF में व्युत्पत्ति दी गई है तो मुख्य steps
+- Group related formulas together as they appear in the textbook
+- Mark important ones mentioned multiple times with \\textbf{(परीक्षा महत्वपूर्ण)}
+- Include conditions under which each formula applies (as stated in PDF)
+- Include derived forms if shown in the textbook
 
 ** याद रखने योग्य बिंदु (Key Points to Remember) **
-- 10-15 must-know facts per chapter
-- Rules, principles, exceptions
-- Common exam traps
+- 10-15 must-know facts per chapter extracted from the PDF
+- Important rules, principles, laws, properties as stated in the textbook
+- Special cases and exceptions mentioned in the PDF
+- Common exam traps mentioned in textbook exercises or notes
+- Mark frequently-tested concepts from exercise questions with \\textbf{(IMP)}
 
-** तुलनात्मक तालिका (Comparison Tables) ** (where applicable)
-- Use tabularx with at least 4-5 rows
-- All table content in Hindi
+** तुलनात्मक तालिका (Comparison Tables) ** (विषय-विशिष्ट)
+- गणित/भौतिकी/रसायन के लिए: तुलनात्मक तालिका केवल तब जब विभिन्न विधियों/approaches की तुलना हो
+- वाणिज्य/मानविकी के लिए: समान अवधारणाओं के बीच अंतर (कम से कम 4-5 पंक्तियां)
+- वाणिज्य के लिए: वर्गीकरण तालिकाएं (खातों के प्रकार, कंपनियों के प्रकार आदि)
+- इतिहास के लिए: वर्षवार घटना तालिका (वर्ष | घटना | महत्व)
+- जीव विज्ञान के लिए: वर्गीकरण और गुण तुलना तालिकाएं
+- यदि पाठ्यपुस्तक में तुलना दी गई है तो उसे शामिल करें
 
 ** त्वरित पुनरावृत्ति (Quick Revision) **
-- 8-10 last-minute bullets
-- Mnemonics or memory tricks
+- 8-10 absolute last-minute bullets extracted from chapter summaries or key points in the PDF
+- Chapter की सबसे महत्वपूर्ण बातें जो student को अवश्य पता होनी चाहिए
+- STEM विषयों के लिए: गणना की tricks, shortcuts, सामान्य गलतियों से बचाव
+- गणित के लिए: Pattern पहचानने की tips, कौन सा formula कब use करें
+- सभी विषयों के लिए: यदि पाठ्यपुस्तक में mnemonics या याद रखने की tricks दी गई हैं तो include करें
+- यदि chapter में example questions हैं तो उनसे key takeaways
+- सबसे महत्वपूर्ण point को \\textbf{अति महत्वपूर्ण} से mark करें
 
 ** 5 अंक महत्वपूर्ण नोट्स (5 Marks Important Notes) **
 - 2-3 exam-ready notes per chapter (80-120 words each in Hindi)
+- These should be based on important topics/questions from the chapter exercises or examples in the PDF
 - Format: \\textbf{विषय का नाम} \\hfill \\textit{[5 अंक]}
-- Include formulas where relevant
+- Write complete answers that students can directly use in exams
+- Include formulas from the PDF where relevant
 
 ${extra}
 
@@ -323,10 +386,23 @@ FORMATTING RULES:
 14. Do NOT use \\ce{} command (mhchem package is NOT loaded)
 15. Do NOT use tcolorbox, multicol, polyglossia, or any packages NOT in the preamble
 16. Make the document LONG and DETAILED — 40-80 pages when compiled
+17. LENGTH GUIDELINE: The output should be 40-80 pages when compiled. Do NOT shorten it. Include EVERYTHING important from the PDF.
+
+══════════════════════════════════════════
+⚠️ CRITICAL REMINDERS:
+══════════════════════════════════════════
+
+1. **EXTRACT, DON'T GENERATE**: Your job is to EXTRACT content from this PDF and present it in an organized way. Do NOT add information from your general knowledge.
+2. **VERIFY AGAINST PDF**: Every definition, formula, fact, date, or concept you include MUST be present in the uploaded PDF.
+3. **COMPLETE COVERAGE**: Go through the PDF systematically, chapter by chapter. Do NOT skip chapters.
+4. **USE TEXTBOOK LANGUAGE**: Translate the textbook's exact explanations to Hindi. Do NOT write in your own words unless necessary.
+5. **NO HALLUCINATIONS**: If a formula or fact is not in the PDF, do NOT include it.
 
 IMPORTANT: Start directly with \\documentclass and end with \\end{document}.
 Do NOT wrap output in markdown code blocks.
-Write ALL content in Hindi (Devanagari). Only formulas stay in LaTeX math.`;
+Write ALL content in Hindi (Devanagari). Only formulas stay in LaTeX math.
+
+Now analyze the PDF carefully and create a comprehensive Hindi cheatsheet that follows ALL the rules above.`;
 }
 
 function wrapInLatexDocument(content: string, subject: string, studentClass: string): string {
