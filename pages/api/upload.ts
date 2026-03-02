@@ -643,9 +643,13 @@ HINDI TEXT EXAMPLES:
 
 LaTeX TEMPLATE FOR HINDI:
 - Use \\documentclass[12pt,a4paper]{article} 
-- Use \\usepackage{fontspec} and \\setmainfont{Noto Sans Devanagari}
-- Use \\usepackage{polyglossia} and \\setdefaultlanguage{hindi}
+- Use \\usepackage{fontspec} and \\setmainfont{FreeSerif}
+- Do NOT use polyglossia package — it breaks numbering
+- Do NOT use Noto Sans Devanagari — use FreeSerif (supports both Latin and Devanagari)
 - Do NOT use inputenc or fontenc packages (they conflict with fontspec)
+- Do NOT use \\texthindi{}, \\textenglish{}, or any language-switch commands
+- Use standard LaTeX numbering — do NOT convert numbers to Devanagari
+- Option labels should use (अ), (ब), (स), (द) OR (a), (b), (c), (d) — NOT roman numerals
 - The document will be compiled with LuaLaTeX
 
 HEADER EXAMPLE:

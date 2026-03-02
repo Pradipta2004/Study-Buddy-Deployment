@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 
 // Minimal LaTeX sanitizer — only fix clearly broken syntax without corrupting valid LaTeX.
 // Gemini already produces well-formed LaTeX, so aggressive escaping does more harm than good.
-function sanitizeLatex(latex: string): string {
+function sanitizeLatex(latex: string, language: string = 'english'): string {
   let sanitized = latex;
 
   // Fix incorrect enumerate syntax for enumitem package
@@ -21,6 +21,51 @@ function sanitizeLatex(latex: string): string {
   // Remove extra spaces before braces in common commands
   sanitized = sanitized.replace(/\\textbf\s*\{/g, '\\textbf{');
   sanitized = sanitized.replace(/\\textit\s*\{/g, '\\textit{');
+
+  // === Hindi font fixes: prevent boxes for numbering/characters ===
+  if (language === 'hindi') {
+    // Remove polyglossia — it forces Devanagari numbering which renders as boxes
+    sanitized = sanitized.replace(/\\usepackage\{polyglossia\}\s*/g, '');
+    sanitized = sanitized.replace(/\\setdefaultlanguage\{[^}]*\}\s*/g, '');
+    sanitized = sanitized.replace(/\\setotherlanguage\{[^}]*\}\s*/g, '');
+
+    // Remove problematic font family declarations
+    sanitized = sanitized.replace(/\\newfontfamily\\hindifont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
+    sanitized = sanitized.replace(/\\newfontfamily\\englishfont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
+    sanitized = sanitized.replace(/\\newfontfamily\\devanagarifont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
+
+    // Replace any \setmainfont with FreeSerif (handles both Latin + Devanagari)
+    sanitized = sanitized.replace(/\\setmainfont\{[^}]*\}(\[[^\]]*\])?/g, '\\setmainfont{FreeSerif}');
+    // Also handle \setmainfont with options before font name: \setmainfont[...]{...}
+    sanitized = sanitized.replace(/\\setmainfont\[[^\]]*\]\{[^}]*\}/g, '\\setmainfont{FreeSerif}');
+
+    // Remove polyglossia language-switch commands from body text
+    sanitized = sanitized.replace(/\\textenglish\{([^}]*)\}/g, '$1');
+    sanitized = sanitized.replace(/\\texthi(ndi)?\{([^}]*)\}/g, '$2');
+    sanitized = sanitized.replace(/\\begin\{english\}/g, '');
+    sanitized = sanitized.replace(/\\end\{english\}/g, '');
+
+    // Ensure \usepackage{fontspec} and \setmainfont exist
+    if (!sanitized.includes('\\usepackage{fontspec}')) {
+      sanitized = sanitized.replace(/\\documentclass(\[[^\]]*\])?\{[^}]*\}/, '$&\n\\usepackage{fontspec}\n\\setmainfont{FreeSerif}');
+    }
+    if (!sanitized.includes('\\setmainfont')) {
+      sanitized = sanitized.replace(/\\usepackage\{fontspec\}/, '$&\n\\setmainfont{FreeSerif}');
+    }
+
+    // Remove \ce{} commands (mhchem not loaded) — convert to plain text math
+    sanitized = sanitized.replace(/\\ce\{([^}]*)\}/g, (_, content) => {
+      return `$\\text{${content}}$`;
+    });
+
+    // Remove tcolorbox usage
+    sanitized = sanitized.replace(/\\begin\{tcolorbox\}(\[[^\]]*\])?/g, '\\begin{center}\\rule{\\textwidth}{0.4pt}');
+    sanitized = sanitized.replace(/\\end\{tcolorbox\}/g, '\\rule{\\textwidth}{0.4pt}\\end{center}');
+
+    // Remove multicol
+    sanitized = sanitized.replace(/\\begin\{multicols\}\{[^}]*\}/g, '');
+    sanitized = sanitized.replace(/\\end\{multicols\}/g, '');
+  }
 
   // Ensure document has \end{document}
   if (sanitized.includes('\\begin{document}') && !sanitized.includes('\\end{document}')) {
@@ -273,8 +318,8 @@ export default async function handler(
     // Process LaTeX to handle solutions placement
     let processedLatex = latex;
     
-    // Sanitize LaTeX to fix common syntax errors
-    processedLatex = sanitizeLatex(processedLatex);
+    // Sanitize LaTeX to fix common syntax errors (pass language for Hindi font fixes)
+    processedLatex = sanitizeLatex(processedLatex, language);
     
     if (includeSolutions) {
       // Restructure: ALL questions first, then ALL solutions at the end with proper numbering
