@@ -8,6 +8,7 @@ interface QuestionConfig {
   questionTypes: string[];
   difficulty: string;
   studentClass: string;
+  language: 'english' | 'hindi';
   customInstructions?: string;
   questionsByType?: {
     mcq: number;
@@ -228,10 +229,10 @@ const CLASS_CATEGORIES = [
   }
 ];
 
-type Step = 'class' | 'subject' | 'difficulty' | 'modeSelection' | 'customize' | 'instructions' | 'complete';
+type Step = 'language' | 'class' | 'subject' | 'difficulty' | 'modeSelection' | 'customize' | 'instructions' | 'complete';
 
 export default function QuestionCustomizer({ config, onConfigChange, mode, onModeChange }: Props) {
-  const [step, setStep] = useState<Step>('class');
+  const [step, setStep] = useState<Step>('language');
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -259,7 +260,8 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
   });
 
   function handleSwipeLeft() {
-    if (step === 'class') goToStep('subject');
+    if (step === 'language') goToStep('class');
+    else if (step === 'class') goToStep('subject');
     else if (step === 'subject') goToStep('difficulty');
     else if (step === 'difficulty') goToStep('modeSelection');
     else if (step === 'modeSelection') {
@@ -270,7 +272,8 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
   }
 
   function handleSwipeRight() {
-    if (step === 'subject') goToStep('class');
+    if (step === 'class') goToStep('language');
+    else if (step === 'subject') goToStep('class');
     else if (step === 'difficulty') goToStep('subject');
     else if (step === 'modeSelection') goToStep('difficulty');
     else if (step === 'customize') goToStep('modeSelection');
@@ -283,7 +286,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
   }
 
   const getStepNumber = () => {
-    const steps = ['class', 'subject', 'difficulty', 'modeSelection'];
+    const steps: Step[] = ['language', 'class', 'subject', 'difficulty', 'modeSelection'];
     if (mode === 'custom') {
       steps.push('customize', 'instructions', 'complete');
     } else {
@@ -292,7 +295,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
     return steps.indexOf(step) + 1;
   };
 
-  const getTotalSteps = () => mode === 'custom' ? 7 : 6;
+  const getTotalSteps = () => mode === 'custom' ? 8 : 7;
 
   // Get current class level category
   const getCurrentClassLevel = (): string => {
@@ -306,6 +309,47 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
   const getAvailableSubjects = () => {
     const level = getCurrentClassLevel();
     return SUBJECTS.filter(subject => subject.levels.includes(level));
+  };
+
+  const renderLanguageSelector = () => {
+    return (
+      <div className="animate-fadeIn">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">🌐 Select Language</h3>
+        <p className="text-xs text-gray-500 mb-4">Choose the language for your question paper and solutions</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            onClick={() => {
+              onConfigChange({ ...config, language: 'english' });
+              goToStep('class');
+            }}
+            className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all shadow-sm ${
+              config.language === 'english'
+                ? 'border-blue-600 bg-blue-50 shadow-lg'
+                : 'border-blue-300 bg-blue-50 hover:bg-blue-100 hover:border-blue-500'
+            }`}
+          >
+            <span className="text-4xl">🇬🇧</span>
+            <span className="text-xl font-bold text-gray-800">English</span>
+            <span className="text-xs text-gray-500">Question paper in English</span>
+          </button>
+          <button
+            onClick={() => {
+              onConfigChange({ ...config, language: 'hindi' });
+              goToStep('class');
+            }}
+            className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all shadow-sm ${
+              config.language === 'hindi'
+                ? 'border-orange-600 bg-orange-50 shadow-lg'
+                : 'border-orange-300 bg-orange-50 hover:bg-orange-100 hover:border-orange-500'
+            }`}
+          >
+            <span className="text-4xl">🇮🇳</span>
+            <span className="text-xl font-bold text-gray-800">हिंदी</span>
+            <span className="text-xs text-gray-500">प्रश्नपत्र हिंदी में</span>
+          </button>
+        </div>
+      </div>
+    );
   };
 
   const renderClassSelector = () => {
@@ -880,6 +924,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
         <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200 text-center space-y-2">
           <p className="text-sm font-bold text-green-700">✓ Ready</p>
           <div className="text-xs space-y-1 text-gray-700">
+            <p><span className="font-bold">Language:</span> {config.language === 'hindi' ? '🇮🇳 हिंदी' : '🇬🇧 English'}</p>
             <p><span className="font-bold">Class:</span> {getClassLabel()}</p>
             <p><span className="font-bold">Subject:</span> {SUBJECTS.find(s => s.value === config.subject)?.label.split(' ')[0]}</p>
             <p><span className="font-bold">Difficulty:</span> {DIFFICULTIES.find(d => d.value === config.difficulty)?.label.split(' ')[0]}</p>
@@ -896,7 +941,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
             )}
           </div>
           <button
-            onClick={() => setStep('class')}
+            onClick={() => setStep('language')}
             className="mt-2 bg-blue-600 text-white font-bold py-1 px-4 rounded text-xs hover:bg-blue-700"
           >
             Change
@@ -936,6 +981,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
 
       {/* Content */}
       <div className="min-h-64">
+        {step === 'language' && renderLanguageSelector()}
         {step === 'class' && renderClassSelector()}
         {step === 'subject' && renderSubjectSelector()}
         {step === 'difficulty' && renderDifficultySelector()}
@@ -949,20 +995,22 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
       <div className="flex gap-2 justify-between pt-2">
         <button
           onClick={() => {
-            if (step === 'subject') goToStep('class');
+            if (step === 'class') goToStep('language');
+            else if (step === 'subject') goToStep('class');
             else if (step === 'difficulty') goToStep('subject');
             else if (step === 'modeSelection') goToStep('difficulty');
             else if (step === 'customize') goToStep('modeSelection');
             else if (step === 'instructions') goToStep(mode === 'custom' ? 'customize' : 'modeSelection');
             else if (step === 'complete') goToStep('instructions');
           }}
-          className={`btn-secondary py-2 px-3 text-xs md:text-sm ${step === 'class' ? 'opacity-0 pointer-events-none' : ''}`}
+          className={`btn-secondary py-2 px-3 text-xs md:text-sm ${step === 'language' ? 'opacity-0 pointer-events-none' : ''}`}
         >
           ← Back
         </button>
         <button
           onClick={() => {
-            if (step === 'class') goToStep('subject');
+            if (step === 'language') goToStep('class');
+            else if (step === 'class') goToStep('subject');
             else if (step === 'subject') goToStep('difficulty');
             else if (step === 'difficulty') goToStep('modeSelection');
             else if (step === 'customize') goToStep('instructions');

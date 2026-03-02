@@ -98,7 +98,8 @@ function fixUnbalancedEnvironments(latex: string): string {
  * Restructure LaTeX so that ALL questions appear first, followed by ALL solutions at the end.
  * This extracts solutions from their inline positions and appends them as a separate "ANSWER KEY" section.
  */
-function restructureWithSolutionsAtEnd(latex: string): string {
+function restructureWithSolutionsAtEnd(latex: string, language: string = 'english'): string {
+  const isHindi = language === 'hindi';
   const solutions: { number: string; content: string }[] = [];
 
   // ── Step 1 : Extract solutions from  % START SOLUTION … % END SOLUTION markers ──
@@ -140,7 +141,7 @@ function restructureWithSolutionsAtEnd(latex: string): string {
     // Scan backwards from the solution start to find the nearest question heading
     const textBefore = lines.slice(0, block.startLine).join('\n');
 
-    // Multiple question-heading patterns Gemini may use
+    // Multiple question-heading patterns Gemini may use (English and Hindi)
     const qRegexes = [
       /\\subsection\*\{(?:Question|Q\.?)\s*(\d+)/g,
       /\\textbf\{(?:Question|Q\.?)\s*(\d+)/g,
@@ -149,6 +150,10 @@ function restructureWithSolutionsAtEnd(latex: string): string {
       /\\textbf\{(\d+)\./g,              // \textbf{1.  ...}
       /\\noindent\s*(\d+)\.\s*\\textbf/g, // 1. \textbf{...}
       /\\section\*\{(?:Question|Q\.?)\s*(\d+)/g,
+      // Hindi question headers
+      /\\subsection\*\{प्रश्न\s*(\d+)/g,
+      /\\textbf\{प्रश्न\s*(\d+)/g,
+      /\\noindent\s*\\textbf\{प्रश्न\s*(\d+)/g,
     ];
 
     let qNum = '';
@@ -168,13 +173,21 @@ function restructureWithSolutionsAtEnd(latex: string): string {
       qNum = String(solutions.length + 1); // fallback: sequential
     }
 
-    // Clean the solution body — strip redundant headers
+    // Clean the solution body — strip redundant headers (English and Hindi)
     let body = block.body;
     body = body.replace(/^\\subsection\*\{Solution[^}]*\}\s*/i, '');
     body = body.replace(/^\\textbf\{Solution[^}]*\}\s*/i, '');
     body = body.replace(/^\\noindent\s*\\textbf\{Solution[^}]*\}\s*/i, '');
     body = body.replace(/^\s*\\paragraph\*?\{Solution[^}]*\}\s*/i, '');
     body = body.replace(/^\s*Solution[:\.]?\s*/i, '');
+    // Hindi solution headers
+    body = body.replace(/^\\subsection\*\{हल[^}]*\}\s*/, '');
+    body = body.replace(/^\\textbf\{हल[^}]*\}\s*/, '');
+    body = body.replace(/^\\noindent\s*\\textbf\{हल[^}]*\}\s*/, '');
+    body = body.replace(/^\\subsection\*\{उत्तर[^}]*\}\s*/, '');
+    body = body.replace(/^\\textbf\{उत्तर[^}]*\}\s*/, '');
+    body = body.replace(/^\\noindent\s*\\textbf\{उत्तर[^}]*\}\s*/, '');
+    body = body.replace(/^\s*हल[:\.]?\s*/, '');
     body = body.trim();
 
     solutions.push({ number: qNum, content: body });
@@ -216,13 +229,13 @@ function restructureWithSolutionsAtEnd(latex: string): string {
   if (solutions.length > 0) {
     const solParts = solutions.map(
       (sol) =>
-        `\\subsection*{Answer ${sol.number}}\n${sol.content}\n\n\\vspace{0.4cm}`
+        `\\subsection*{${isHindi ? 'उत्तर' : 'Answer'} ${sol.number}}\n${sol.content}\n\n\\vspace{0.4cm}`
     );
 
     const answerSection = `
 \\newpage
 \\begin{center}
-{\\Large \\textbf{ANSWER KEY \\& SOLUTIONS}}\\\\[0.3cm]
+{\\Large \\textbf{${isHindi ? 'उत्तर कुंजी एवं हल' : 'ANSWER KEY \\& SOLUTIONS'}}}\\\\[0.3cm]
 \\rule{\\textwidth}{0.4pt}
 \\end{center}
 \\vspace{0.5cm}
@@ -251,7 +264,7 @@ export default async function handler(
   }
 
   try {
-    const { latex, includeSolutions = true, subject = 'subject', studentClass = 'class' } = req.body;
+    const { latex, includeSolutions = true, subject = 'subject', studentClass = 'class', language = 'english' } = req.body;
 
     if (!latex) {
       return res.status(400).json({ error: 'No LaTeX content provided' });
@@ -265,7 +278,7 @@ export default async function handler(
     
     if (includeSolutions) {
       // Restructure: ALL questions first, then ALL solutions at the end with proper numbering
-      processedLatex = restructureWithSolutionsAtEnd(processedLatex);
+      processedLatex = restructureWithSolutionsAtEnd(processedLatex, language);
     } else {
       // Remove all solution sections comprehensively
       // Pattern 0: Explicit markers (High Priority)
@@ -301,8 +314,10 @@ export default async function handler(
 
     try {
       // Compile LaTeX to PDF using external service
-      // Try pdflatex first (faster, more compatible), fallback to lualatex
-      const compilers = ['pdflatex', 'lualatex'];
+      // For Hindi (Devanagari script), use lualatex first since pdflatex can't handle Unicode fonts
+      // For English, try pdflatex first (faster, more compatible), fallback to lualatex
+      const isHindiLang = language === 'hindi';
+      const compilers = isHindiLang ? ['lualatex', 'pdflatex'] : ['pdflatex', 'lualatex'];
       let pdfData: Buffer | null = null;
       let lastError = '';
 

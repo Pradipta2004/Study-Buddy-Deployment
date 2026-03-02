@@ -10,6 +10,7 @@ interface QuestionConfig {
   questionTypes: string[];
   difficulty: string;
   studentClass: string;
+  language: 'english' | 'hindi';
   customInstructions?: string;
   questionsByType?: {
     mcq: number;
@@ -129,6 +130,7 @@ export default function Home() {
     questionTypes: ['problem-solving', 'conceptual'],
     difficulty: 'mixed',
     studentClass: '10',
+    language: 'english',
   });
   const [isDragging, setIsDragging] = useState(false);
   const [showCompleteSolutions, setShowCompleteSolutions] = useState(false);
@@ -447,6 +449,7 @@ export default function Home() {
       });
       formData.append('difficulty', config.difficulty);
       formData.append('studentClass', config.studentClass);
+      formData.append('language', config.language);
       
       if (config.customInstructions) {
         formData.append('customInstructions', config.customInstructions);
@@ -820,7 +823,8 @@ export default function Home() {
           latex: latexContent, 
           includeSolutions,
           subject: config.subject,
-          studentClass: config.studentClass
+          studentClass: config.studentClass,
+          language: config.language
         }),
       });
 

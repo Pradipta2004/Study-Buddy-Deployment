@@ -18,6 +18,7 @@ interface PDFMetadata {
   subject?: string;
   questionTypes?: string[];
   difficulty?: string;
+  language?: string;
   customInstructions?: string;
   questionsByType?: {
     mcq: number;
@@ -598,6 +599,73 @@ BANNED: "Define psychology" or "Who is Freud?" as standalone questions.`,
 BANNED: "Define X", "What is X?" as standalone questions. Every question must require THINKING.
 REQUIRED: Cover ALL chapters/topics from the PDF equally.`;
 
+  const isHindi = metadata.language === 'hindi';
+
+  // Hindi language directive — added to prompts when Hindi is selected
+  const hindiLanguageDirective = isHindi ? `
+╔════════════════════════════════════════════════════════════════════════════════════════╗
+║            🇮🇳 HINDI LANGUAGE REQUIREMENT — ABSOLUTELY MANDATORY 🇮🇳                   ║
+╚════════════════════════════════════════════════════════════════════════════════════════╝
+
+⚠️ THE ENTIRE QUESTION PAPER AND ALL SOLUTIONS MUST BE IN HINDI (हिंदी) LANGUAGE ⚠️
+
+MANDATORY RULES:
+1. ALL question text MUST be written in Hindi using Devanagari script (हिंदी देवनागरी लिपि)
+2. ALL solution/answer text MUST be in Hindi using Devanagari script
+3. ALL instructions, headers, section titles MUST be in Hindi
+4. MCQ options MUST be in Hindi
+5. Fill-in-the-blanks text MUST be in Hindi
+6. True/False statements MUST be in Hindi
+7. Column matching items MUST be in Hindi
+
+EXCEPTIONS (keep in English/original script):
+- Mathematical formulas and equations ($...$ and \\[...\\]) — keep in standard math notation
+- Chemical formulas (H₂O, NaOH, etc.) — keep in standard notation
+- Scientific symbols and units (kg, m/s, N, J, etc.)
+- Variable names in equations (x, y, z, etc.)
+- Programming code snippets (if any)
+- Proper nouns of foreign origin that don't have common Hindi equivalents
+
+HINDI TEXT EXAMPLES:
+- "प्रश्न 1 [2 अंक]" instead of "Question 1 [2 marks]"
+- "हल:" or "उत्तर:" instead of "Solution:"
+- "बहुविकल्पीय प्रश्न" instead of "Multiple Choice Questions"
+- "रिक्त स्थान भरिए" instead of "Fill in the blanks"
+- "सत्य/असत्य" instead of "True/False"
+- "स्तंभ मिलान" instead of "Column Matching"
+- "परीक्षा प्रश्नपत्र" instead of "EXAMINATION PAPER"
+- "विषय:" instead of "Subject:"
+- "कठिनाई स्तर:" instead of "Difficulty Level:"
+- "परीक्षार्थियों के लिए निर्देश:" instead of "INSTRUCTIONS TO CANDIDATES:"
+- "सभी प्रश्नों को ध्यानपूर्वक पढ़ें।" instead of "Read all questions carefully."
+- "पूर्ण अंक प्राप्त करने के लिए सभी कार्य दिखाएं।" instead of "Show all working for full credit."
+- "उत्तर कुंजी एवं हल" instead of "ANSWER KEY & SOLUTIONS"
+
+LaTeX TEMPLATE FOR HINDI:
+- Use \\documentclass[12pt,a4paper]{article} 
+- Use \\usepackage{fontspec} and \\setmainfont{Noto Sans Devanagari}
+- Use \\usepackage{polyglossia} and \\setdefaultlanguage{hindi}
+- Do NOT use inputenc or fontenc packages (they conflict with fontspec)
+- The document will be compiled with LuaLaTeX
+
+HEADER EXAMPLE:
+\\begin{center}
+{\\Large \\textbf{परीक्षा प्रश्नपत्र}}\\\\[0.3cm]
+{\\large \\textbf{विषय: गणित}}\\\\[0.2cm]
+{\\textbf{कठिनाई स्तर: मध्यम}}\\\\[0.2cm]
+\\rule{\\textwidth}{0.4pt}
+\\end{center}
+
+QUESTION HEADER FORMAT:
+\\noindent\\textbf{प्रश्न 1 [2 अंक]} \\hfill \\textit{\\small [अध्याय का नाम]}
+
+SOLUTION FORMAT:
+% START SOLUTION
+\\noindent\\textbf{हल:}
+[Step-by-step solution in Hindi]
+% END SOLUTION
+` : '';
+
   // Use enhanced directive directly in prompts
   const enhancedUniversalDirective = `
 ╔════════════════════════════════════════════════════════════════════════════════════════╗
@@ -729,12 +797,84 @@ CRITICAL PRINCIPLE #5: SOLUTION QUALITY (MANDATORY FOR ALL)
 
   const universalQualityDirective = enhancedUniversalDirective;
 
+  // Build Hindi-specific LaTeX preamble
+  const hindiLatexPreamble = isHindi ? `\\documentclass[12pt,a4paper]{article}
+\\usepackage{fontspec}
+\\usepackage{polyglossia}
+\\setdefaultlanguage{hindi}
+\\setotherlanguage{english}
+\\setmainfont{Noto Sans Devanagari}[Script=Devanagari]
+\\newfontfamily\\englishfont{Latin Modern Roman}
+\\usepackage{amsmath}
+\\usepackage{amssymb}
+\\usepackage{geometry}
+\\usepackage{enumitem}
+\\usepackage{fancyhdr}
+\\usepackage{graphicx}
+\\usepackage{array}
+\\usepackage{tabularx}
+\\geometry{margin=0.75in, top=1in, bottom=1in}` : `\\documentclass[12pt,a4paper]{article}
+\\usepackage{amsmath}
+\\usepackage{amssymb}
+\\usepackage{geometry}
+\\usepackage{enumitem}
+\\usepackage{fancyhdr}
+\\usepackage{graphicx}
+\\usepackage{array}
+\\usepackage{tabularx}
+\\geometry{margin=0.75in, top=1in, bottom=1in}`;
+
+  const hindiHeader = isHindi ? `\\pagestyle{fancy}
+\\fancyhf{}
+\\fancyhead[L]{\\textbf{${subject.charAt(0).toUpperCase() + subject.slice(1)} परीक्षा}}
+\\fancyhead[R]{\\textbf{पृष्ठ \\thepage}}
+\\fancyfoot[C]{\\small सभी प्रश्नों के अंक निर्देशानुसार हैं}` : `\\pagestyle{fancy}
+\\fancyhf{}
+\\fancyhead[L]{\\textbf{${subject.charAt(0).toUpperCase() + subject.slice(1)} Examination}}
+\\fancyhead[R]{\\textbf{Page \\thepage}}
+\\fancyfoot[C]{\\small All questions carry marks as indicated}`;
+
+  const hindiDocHeader = isHindi ? `\\begin{center}
+{\\Large \\textbf{परीक्षा प्रश्नपत्र}}\\\\[0.3cm]
+{\\large \\textbf{विषय: ${subject.charAt(0).toUpperCase() + subject.slice(1)}}}\\\\[0.2cm]
+{\\textbf{कठिनाई स्तर: ${difficulty === 'easy' ? 'सरल' : difficulty === 'medium' ? 'मध्यम' : difficulty === 'hard' ? 'कठिन' : 'मिश्रित'}}}\\\\[0.2cm]
+\\rule{\\textwidth}{0.4pt}
+\\end{center}` : `\\begin{center}
+{\\Large \\textbf{EXAMINATION PAPER}}\\\\[0.3cm]
+{\\large \\textbf{Subject: ${subject.charAt(0).toUpperCase() + subject.slice(1)}}}\\\\[0.2cm]
+{\\textbf{Difficulty Level: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}}}\\\\[0.2cm]
+\\rule{\\textwidth}{0.4pt}
+\\end{center}`;
+
+  const hindiInstructions = isHindi ? `\\noindent\\fbox{\\parbox{\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule}{
+\\textbf{परीक्षार्थियों के लिए निर्देश:}\\\\[0.2cm]
+\\begin{itemize}[leftmargin=*, itemsep=0pt]
+\\item सभी प्रश्नों को ध्यानपूर्वक पढ़ें।
+\\item पूर्ण अंक प्राप्त करने के लिए सभी कार्य दिखाएं।
+\\item प्रत्येक प्रश्न के अंक कोष्ठक में दिए गए हैं।
+\\end{itemize}
+}}` : `\\noindent\\fbox{\\parbox{\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule}{
+\\textbf{INSTRUCTIONS TO CANDIDATES:}\\\\[0.2cm]
+\\begin{itemize}[leftmargin=*, itemsep=0pt]
+\\item Read all questions carefully before attempting.
+\\item Show all working for full credit.
+\\item Marks for each question are indicated in brackets.
+\\end{itemize}
+}}`;
+
+  const questionLabel = isHindi ? 'प्रश्न' : 'Question';
+  const marksLabel = isHindi ? 'अंक' : 'marks';
+  const solutionLabel = isHindi ? 'हल:' : 'Solution:';
+  const questionsSection = isHindi ? '\\section*{प्रश्न}' : '\\section*{QUESTIONS}';
+
   const prompt = patternText
     ? `You are an expert ${subject} educator and professional LaTeX exam paper creator.
 
 TASK: Generate a NEW exam question paper that EXACTLY replicates the structure and format described in the pattern analysis below.
 
 ⚠️ ABSOLUTE RULE: Generate questions EXCLUSIVELY from the attached PDF textbook. Do NOT use your own knowledge, training data, or any external source. Every question must be directly based on content, examples, exercises, or topics found in the uploaded PDF. If a topic is not in the PDF, do NOT include it.
+
+${hindiLanguageDirective}
 
 ${universalQualityDirective}
 
@@ -762,20 +902,22 @@ GENERATION RULES:
 7. **PRIORITY SOURCE**: Questions should primarily come from exercise sections, solved examples, and important problems — NOT from introductory paragraphs or definitions on the first page.
 8. For EVERY question, include a solution wrapped in:
    % START SOLUTION
-   [Step-by-step solution with detailed working]
+   [Step-by-step solution with detailed working${isHindi ? ' in Hindi' : ''}]
    % END SOLUTION
-9. Use proper LaTeX: amsmath, amssymb, geometry, enumitem, fancyhdr, array, tabularx
+9. Use proper LaTeX: ${isHindi ? 'fontspec, polyglossia, ' : ''}amsmath, amssymb, geometry, enumitem, fancyhdr, array, tabularx${isHindi ? '. Use \\\\documentclass[12pt,a4paper]{article} with \\\\usepackage{fontspec} and \\\\setmainfont{Noto Sans Devanagari} for Hindi support. Compile with LuaLaTeX.' : ''}
 10. Use $...$ for inline math, \\[...\\] for display math (avoid $$ which can cause alignment issues)
 11. For MCQs: use \\begin{enumerate}[label=(\\alph*), leftmargin=2em] for perfectly aligned options
 12. For fill-in-blanks: use \\underline{\\hspace{3cm}}
 13. For Column Matching: use LaTeX tabularx with proper column alignment
-14. **FORMATTING**: Use \\noindent\\textbf{Question N [X marks]} \\hfill \\textit{\\small [Chapter Name]} for each question header
+14. **FORMATTING**: Use \\noindent\\textbf{${questionLabel} N [X ${marksLabel}]} \\hfill \\textit{\\small [${isHindi ? 'अध्याय का नाम' : 'Chapter Name'}]} for each question header
 15. The chapter/topic name MUST appear right-aligned on the same line using \\hfill
 16. Use \\noindent before question text. Add \\vspace{0.5cm} and \\noindent\\rule{0.3\\textwidth}{0.3pt} between questions
 17. For sub-parts: use \\begin{enumerate}[label=(\\alph*)] or [label=(\\roman*)] with leftmargin=2em
 
 IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no explanations, no code fences.`
     : `You are an expert ${subject} educator and LaTeX document formatter.
+
+${hindiLanguageDirective}
 
 ${universalQualityDirective}
 
@@ -803,61 +945,36 @@ Question Requirements:
 
 Format your response ENTIRELY in LaTeX using this structure:
 
-\\documentclass[12pt,a4paper]{article}
-\\usepackage{amsmath}
-\\usepackage{amssymb}
-\\usepackage{geometry}
-\\usepackage{enumitem}
-\\usepackage{fancyhdr}
-\\usepackage{graphicx}
-\\usepackage{array}
-\\usepackage{tabularx}
-\\geometry{margin=0.75in, top=1in, bottom=1in}
+${hindiLatexPreamble}
 
-\\pagestyle{fancy}
-\\fancyhf{}
-\\fancyhead[L]{\\textbf{${subject.charAt(0).toUpperCase() + subject.slice(1)} Examination}}
-\\fancyhead[R]{\\textbf{Page \\thepage}}
-\\fancyfoot[C]{\\small All questions carry marks as indicated}
+${hindiHeader}
 
 \\begin{document}
 
-\\begin{center}
-{\\Large \\textbf{EXAMINATION PAPER}}\\\\[0.3cm]
-{\\large \\textbf{Subject: ${subject.charAt(0).toUpperCase() + subject.slice(1)}}}\\\\[0.2cm]
-{\\textbf{Difficulty Level: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}}}\\\\[0.2cm]
-\\rule{\\textwidth}{0.4pt}
-\\end{center}
+${hindiDocHeader}
 
 \\vspace{0.3cm}
 
-\\noindent\\fbox{\\parbox{\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule}{
-\\textbf{INSTRUCTIONS TO CANDIDATES:}\\\\[0.2cm]
-\\begin{itemize}[leftmargin=*, itemsep=0pt]
-\\item Read all questions carefully before attempting.
-\\item Show all working for full credit.
-\\item Marks for each question are indicated in brackets.
-\\end{itemize}
-}}
+${hindiInstructions}
 
 \\vspace{0.5cm}
-\\section*{QUESTIONS}
+${questionsSection}
 
 [Generate each question using this EXACT format for perfect alignment:
 
-\\noindent\\textbf{Question 1 [X marks]} \\hfill \\textit{\\small [Chapter Name]}
+\\noindent\\textbf{${questionLabel} 1 [X ${marksLabel}]} \\hfill \\textit{\\small [${isHindi ? 'अध्याय का नाम' : 'Chapter Name'}]}
 
-\\noindent [Question text with proper LaTeX math formatting. Use proper indentation and spacing.]
+\\noindent [${isHindi ? 'प्रश्न का पाठ (हिंदी में)' : 'Question text with proper LaTeX math formatting. Use proper indentation and spacing.'}]
 
 \\begin{enumerate}[label=(\\alph*), leftmargin=2em]
-  \\item Option A
-  \\item Option B
+  \\item ${isHindi ? 'विकल्प अ' : 'Option A'}
+  \\item ${isHindi ? 'विकल्प ब' : 'Option B'}
 \\end{enumerate}
 
 % START SOLUTION
-\\noindent\\textbf{Solution:}
+\\noindent\\textbf{${solutionLabel}}
 
-[Detailed step-by-step solution]
+[${isHindi ? 'विस्तृत चरणबद्ध हल (हिंदी में)' : 'Detailed step-by-step solution'}]
 % END SOLUTION
 
 \\vspace{0.5cm}
@@ -869,7 +986,7 @@ Format your response ENTIRELY in LaTeX using this structure:
 \\end{document}
 
 CRITICAL FORMATTING & ALIGNMENT RULES:
-- Use \\noindent\\textbf{Question N [X marks]} \\hfill \\textit{\\small [Chapter Name]} for EVERY question header
+- Use \\noindent\\textbf{${questionLabel} N [X ${marksLabel}]} \\hfill \\textit{\\small [${isHindi ? 'अध्याय का नाम' : 'Chapter Name'}]} for EVERY question header
 - The chapter name MUST appear right-aligned on the same line as the question number using \\hfill
 - Use \\noindent before every question text to prevent unwanted indentation
 - Use \\vspace{0.5cm} between questions and \\noindent\\rule{0.3\\textwidth}{0.3pt} as separator
@@ -880,7 +997,7 @@ CRITICAL FORMATTING & ALIGNMENT RULES:
 - Use $...$ for inline math, \\[...\\] for display math (NOT $$ which can cause alignment issues)
 - Wrap EVERY solution with % START SOLUTION and % END SOLUTION
 - Number questions consecutively starting from 1
-- Ensure NO orphaned lines or page breaks in the middle of a question
+- Ensure NO orphaned lines or page breaks in the middle of a question${isHindi ? '\n- Use \\\\documentclass[12pt,a4paper]{article} with \\\\usepackage{fontspec}, \\\\usepackage{polyglossia}, \\\\setdefaultlanguage{hindi}, \\\\setmainfont{Noto Sans Devanagari}[Script=Devanagari]\n- Do NOT use inputenc or fontenc packages\n- ALL text content (questions, solutions, headers, instructions) MUST be in Hindi Devanagari script\n- Only mathematical formulas, chemical symbols, and units should remain in English/Latin script' : ''}
 
 IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no code fences.`;
 
@@ -972,6 +1089,34 @@ async function generateQuestionsWithGemini(
   const customInstructionsSection = metadata.customInstructions 
     ? `\n\nCUSTOM INSTRUCTIONS (HIGHEST PRIORITY):\n${metadata.customInstructions}\n\nPlease follow these custom instructions carefully as they take precedence over other settings.`
     : '';
+
+  const isHindi2 = metadata.language === 'hindi';
+
+  // Hindi language directive for text-based generation
+  const hindiDirective2 = isHindi2 ? `
+╔════════════════════════════════════════════════════════════════════════════════════════╗
+║            🇮🇳 HINDI LANGUAGE REQUIREMENT — ABSOLUTELY MANDATORY 🇮🇳                   ║
+╚════════════════════════════════════════════════════════════════════════════════════════╝
+
+⚠️ THE ENTIRE QUESTION PAPER AND ALL SOLUTIONS MUST BE IN HINDI (हिंदी) LANGUAGE ⚠️
+
+MANDATORY RULES:
+1. ALL question text MUST be written in Hindi using Devanagari script (हिंदी देवनागरी लिपि)
+2. ALL solution/answer text MUST be in Hindi using Devanagari script
+3. ALL instructions, headers, section titles MUST be in Hindi
+4. MCQ options, True/False, Fill-in-blanks, Column matching — ALL in Hindi
+5. Use \\documentclass[12pt,a4paper]{article} with \\usepackage{fontspec}, \\usepackage{polyglossia}, \\setdefaultlanguage{hindi}, \\setmainfont{Noto Sans Devanagari}[Script=Devanagari]
+6. Do NOT use inputenc or fontenc packages
+
+EXCEPTIONS (keep in English/original):
+- Mathematical formulas ($...$), chemical formulas, scientific symbols, units, variable names, code snippets
+
+HINDI TEXT EXAMPLES:
+- "प्रश्न 1 [2 अंक]" instead of "Question 1 [2 marks]"
+- "हल:" instead of "Solution:"
+- "परीक्षा प्रश्नपत्र" instead of "EXAMINATION PAPER"
+- "परीक्षार्थियों के लिए निर्देश:" instead of "INSTRUCTIONS TO CANDIDATES"
+` : '';
 
   // Subject-specific intelligent question generation guidelines
   const subjectSpecificGuidelines = {
@@ -1489,6 +1634,8 @@ TASK: Generate a NEW exam question paper that EXACTLY replicates the structure a
 
 ⚠️ ABSOLUTE RULE: Generate questions EXCLUSIVELY from the textbook content provided below. Do NOT use your own knowledge, training data, or any external source. Every single question must be directly traceable to content in the textbook. If a topic is not in the textbook content below, do NOT include questions about it.
 
+${hindiDirective2}
+
 ${patternSection}
 
 TEXTBOOK CONTENT (THE ONLY source for questions — do NOT go outside this):
@@ -1533,6 +1680,8 @@ GENERATION RULES:
 IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no explanations, no code fences.`
     : `You are an expert ${subject} educator and LaTeX document formatter.
 
+${hindiDirective2}
+
 TEXTBOOK CONTENT (THE ONLY source for questions — do NOT go outside this):
 ${pdfText}
 
@@ -1557,7 +1706,29 @@ Question Requirements:
 
 Format your response ENTIRELY in LaTeX using this EXACT structure for a proper exam paper:
 
-\\documentclass[12pt,a4paper]{article}
+${isHindi2 ? `\\documentclass[12pt,a4paper]{article}
+\\usepackage{fontspec}
+\\usepackage{polyglossia}
+\\setmainlanguage{hindi}
+\\setotherlanguage{english}
+\\newfontfamily\\hindifont{Noto Sans Devanagari}[Script=Devanagari]
+\\newfontfamily\\englishfont{Latin Modern Roman}
+\\usepackage{amsmath}
+\\usepackage{amssymb}
+\\usepackage{unicode-math}
+\\usepackage{geometry}
+\\usepackage{enumitem}
+\\usepackage{fancyhdr}
+\\usepackage{graphicx}
+\\usepackage{array}
+\\usepackage{tabularx}
+\\geometry{margin=0.75in, top=1in, bottom=1in}
+
+\\pagestyle{fancy}
+\\fancyhf{}
+\\fancyhead[L]{\\textbf{${subject.charAt(0).toUpperCase() + subject.slice(1)} परीक्षा}}
+\\fancyhead[R]{\\textbf{पृष्ठ \\thepage}}
+\\fancyfoot[C]{\\small सभी प्रश्नों के अंक यथा निर्देशित हैं}` : `\\documentclass[12pt,a4paper]{article}
 \\usepackage{amsmath}
 \\usepackage{amssymb}
 \\usepackage{geometry}
@@ -1572,15 +1743,17 @@ Format your response ENTIRELY in LaTeX using this EXACT structure for a proper e
 \\fancyhf{}
 \\fancyhead[L]{\\textbf{${subject.charAt(0).toUpperCase() + subject.slice(1)} Examination}}
 \\fancyhead[R]{\\textbf{Page \\thepage}}
-\\fancyfoot[C]{\\small All questions carry marks as indicated}
+\\fancyfoot[C]{\\small All questions carry marks as indicated}`}
 
 \\begin{document}
 
 % Header Section
 \\begin{center}
-{\\Large \\textbf{EXAMINATION PAPER}}\\\\[0.3cm]
+${isHindi2 ? `{\\Large \\textbf{परीक्षा प्रश्न पत्र}}\\\\[0.3cm]
+{\\large \\textbf{विषय: ${subject.charAt(0).toUpperCase() + subject.slice(1)}}}\\\\[0.2cm]
+{\\textbf{कठिनाई स्तर: ${difficulty === 'easy' ? 'सरल' : difficulty === 'medium' ? 'मध्यम' : difficulty === 'hard' ? 'कठिन' : difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}}}\\\\[0.2cm]` : `{\\Large \\textbf{EXAMINATION PAPER}}\\\\[0.3cm]
 {\\large \\textbf{Subject: ${subject.charAt(0).toUpperCase() + subject.slice(1)}}}\\\\[0.2cm]
-{\\textbf{Difficulty Level: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}}}\\\\[0.2cm]
+{\\textbf{Difficulty Level: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}}}\\\\[0.2cm]`}
 \\rule{\\textwidth}{0.4pt}
 \\end{center}
 
@@ -1588,24 +1761,44 @@ Format your response ENTIRELY in LaTeX using this EXACT structure for a proper e
 
 % Instructions Box
 \\noindent\\fbox{\\parbox{\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule}{
-\\textbf{INSTRUCTIONS TO CANDIDATES:}\\\\[0.2cm]
+${isHindi2 ? `\\textbf{परीक्षार्थियों के लिए निर्देश:}\\\\[0.2cm]
+\\begin{itemize}[leftmargin=*, itemsep=0pt]
+\\item सभी प्रश्नों को ध्यानपूर्वक पढ़ें।
+\\item सभी प्रश्नों के उत्तर दिए गए स्थान पर या अलग शीट पर लिखें।
+\\item पूर्ण अंक के लिए सभी चरण दिखाएं।
+\\item प्रत्येक प्रश्न के अंक कोष्ठक में दर्शाए गए हैं।
+${questionBreakdown ? '\\item ' + questionBreakdown.replace(/\\n/g, '\\n\\\\item ') : ''}
+\\end{itemize}` : `\\textbf{INSTRUCTIONS TO CANDIDATES:}\\\\[0.2cm]
 \\begin{itemize}[leftmargin=*, itemsep=0pt]
 \\item Read all questions carefully before attempting.
 \\item Answer all questions in the space provided or on separate sheets.
 \\item Show all working for full credit.
 \\item Marks for each question are indicated in brackets.
 ${questionBreakdown ? '\\item ' + questionBreakdown.replace(/\n/g, '\n\\item ').replace('1 Mark Questions:', '\\textbf{Section A:} 1 Mark Questions').replace('Questions by Marks:', '\\textbf{Section B:} Higher Mark Questions') : ''}
-\\end{itemize}
+\\end{itemize}`}
 }}
 
 \\vspace{0.5cm}
 
 % Questions Section
-\\section*{QUESTIONS}
+\\section*{${isHindi2 ? 'प्रश्न' : 'QUESTIONS'}}
 
 [Generate each question using this EXACT format for perfect alignment:
 
-\\noindent\\textbf{Question 1 [X marks]} \\hfill \\textit{\\small [Chapter Name]}
+${isHindi2 ? `\\noindent\\textbf{प्रश्न 1 [X अंक]} \\hfill \\textit{\\small [अध्याय का नाम]}
+
+\\noindent [प्रश्न का पाठ — हिंदी में, गणितीय सूत्रों के लिए LaTeX]
+
+\\begin{enumerate}[label=(\\texthindi{क}), leftmargin=2em]
+  \\item विकल्प क
+  \\item विकल्प ख
+\\end{enumerate}
+
+% START SOLUTION
+\\noindent\\textbf{हल:}
+
+[विस्तृत चरणबद्ध हल — हिंदी में]
+% END SOLUTION` : `\\noindent\\textbf{Question 1 [X marks]} \\hfill \\textit{\\small [Chapter Name]}
 
 \\noindent [Question text with proper LaTeX math formatting.]
 
@@ -1618,7 +1811,7 @@ ${questionBreakdown ? '\\item ' + questionBreakdown.replace(/\n/g, '\n\\item ').
 \\noindent\\textbf{Solution:}
 
 [Detailed step-by-step solution]
-% END SOLUTION
+% END SOLUTION`}
 
 \\vspace{0.5cm}
 \\noindent\\rule{0.3\\textwidth}{0.3pt}
@@ -1629,7 +1822,7 @@ Repeat for all questions.]
 \\end{document}
 
 CRITICAL FORMATTING & ALIGNMENT RULES:
-- Use \\noindent\\textbf{Question N [X marks]} \\hfill \\textit{\\small [Chapter Name]} for EVERY question header
+- Use ${isHindi2 ? '\\noindent\\textbf{प्रश्न N [X अंक]} \\hfill \\textit{\\small [अध्याय का नाम]}' : '\\noindent\\textbf{Question N [X marks]} \\hfill \\textit{\\small [Chapter Name]}'} for EVERY question header
 - The chapter name MUST appear right-aligned on the same line as the question number using \\hfill
 - Use \\noindent before every question text to prevent unwanted indentation
 - Use \\vspace{0.5cm} between questions and \\noindent\\rule{0.3\\textwidth}{0.3pt} as separator
@@ -1639,7 +1832,7 @@ CRITICAL FORMATTING & ALIGNMENT RULES:
 - For Column Matching: Use a proper LaTeX tabularx with aligned columns:
   \\begin{tabularx}{\\textwidth}{|c|X|c|X|}
   \\hline
-  \\textbf{Column A} & & \\textbf{Column B} & \\\\
+  \\textbf{${isHindi2 ? 'स्तंभ अ' : 'Column A'}} & & \\textbf{${isHindi2 ? 'स्तंभ ब' : 'Column B'}} & \\\\
   \\hline
   (i) & Item 1 & (a) & Match 1 \\\\
   \\hline
@@ -1647,7 +1840,7 @@ CRITICAL FORMATTING & ALIGNMENT RULES:
 - Use $...$ for inline math and \\[...\\] for display math (avoid $$ which can cause alignment issues)
 - Wrap EVERY solution with % START SOLUTION and % END SOLUTION comments
 - Add \\vspace{0.5cm} between questions for consistent spacing
-- Ensure NO orphaned lines or page breaks in the middle of a question`;
+- Ensure NO orphaned lines or page breaks in the middle of a question${isHindi2 ? '\n- ALL text content MUST be in Hindi (Devanagari script). Only mathematical formulas and scientific notation remain in English/LaTeX.' : ''}`;
 
   console.log('Sending request to Gemini API...');
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -1724,6 +1917,7 @@ export default async function handler(
             ? fields.questionTypes 
             : (fields.questionTypes ? [fields.questionTypes] : undefined),
           difficulty: Array.isArray(fields.difficulty) ? fields.difficulty[0] : fields.difficulty,
+          language: Array.isArray(fields.language) ? fields.language[0] : fields.language,
           customInstructions: Array.isArray(fields.customInstructions) ? fields.customInstructions[0] : fields.customInstructions,
         };
 
