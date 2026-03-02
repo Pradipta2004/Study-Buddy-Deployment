@@ -22,14 +22,15 @@ async function withRetry<T>(
   fn: () => Promise<T>,
   options: { maxRetries?: number; baseDelay?: number; label?: string } = {}
 ): Promise<T> {
-  const { maxRetries = 2, baseDelay = 3000, label = 'operation' } = options;
+  const { maxRetries = 4, baseDelay = 15000, label = 'operation' } = options;
   let lastError: Error = new Error(`${label} failed`);
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       if (attempt > 0) {
-        const waitTime = baseDelay * Math.pow(2, attempt - 1);
-        console.log(`Retry ${attempt}/${maxRetries} for ${label}, waiting ${waitTime}ms...`);
+        // For rate limits, wait longer — Gemini rate limit window is ~60s
+        const waitTime = baseDelay * Math.pow(1.5, attempt - 1);
+        console.log(`Retry ${attempt}/${maxRetries} for ${label}, waiting ${Math.round(waitTime / 1000)}s...`);
         await delay(waitTime);
       }
       return await fn();
@@ -38,12 +39,18 @@ async function withRetry<T>(
       const msg = error?.message || '';
       const status = error?.status || error?.httpCode || 0;
 
-      if (status === 429 || msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
-        console.log(`Rate limited on attempt ${attempt}, will retry...`);
+      const isRateLimit = status === 429 || msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('rate limit');
+      const isServerError = status >= 500 || msg.includes('500') || msg.includes('overloaded') || msg.includes('UNAVAILABLE');
+
+      if (isRateLimit) {
+        console.log(`Rate limited on attempt ${attempt}/${maxRetries}, will retry after delay...`);
+        if (attempt === maxRetries) {
+          lastError = new Error('AI सेवा की सीमा पूरी हो गई है (Rate limit)। कृपया 1-2 मिनट बाद पुनः प्रयास करें। बड़ी PDF के लिए अधिक समय लग सकता है।');
+        }
         continue;
       }
-      if (status >= 500 || msg.includes('500') || msg.includes('overloaded') || msg.includes('UNAVAILABLE')) {
-        console.log(`Server error on attempt ${attempt}, will retry...`);
+      if (isServerError) {
+        console.log(`Server error on attempt ${attempt}/${maxRetries}, will retry...`);
         continue;
       }
       throw error;
@@ -515,6 +522,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     });
 
+    // Scale retry delays based on file size — larger PDFs need more time between retries
+    const fileSizeMBNum = parseFloat(fileSizeMB);
+    const retryConfig = fileSizeMBNum > 5
+      ? { maxRetries: 5, baseDelay: 20000, label: 'hindi-cheatsheet-generation (large PDF)' }
+      : fileSizeMBNum > 2
+      ? { maxRetries: 4, baseDelay: 15000, label: 'hindi-cheatsheet-generation (medium PDF)' }
+      : { maxRetries: 3, baseDelay: 10000, label: 'hindi-cheatsheet-generation' };
+
+    console.log(`Using retry config: ${retryConfig.maxRetries} retries, ${retryConfig.baseDelay}ms base delay for ${fileSizeMB}MB PDF`);
+
     const result = await withRetry(
       async () => {
         const response = await model.generateContent([
@@ -528,7 +545,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ]);
         return response;
       },
-      { maxRetries: 2, baseDelay: 3000, label: 'hindi-cheatsheet-generation' }
+      retryConfig
     );
 
     const responseText = result.response.text();
@@ -565,8 +582,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ latex, tokenUsage });
   } catch (error: any) {
     console.error('Hindi cheatsheet generation error:', error);
-    return res.status(500).json({
-      error: error.message || 'चीटशीट बनाने में समस्या हुई',
+    const msg = error?.message || '';
+    const isRateLimit = msg.includes('429') || msg.includes('rate limit') || msg.includes('Rate limit') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED');
+    const statusCode = isRateLimit ? 429 : 500;
+    const userMessage = isRateLimit
+      ? 'AI सेवा की सीमा पूरी हो गई है। कृपया 1-2 मिनट बाद पुनः प्रयास करें। बड़ी PDF के लिए अधिक समय लग सकता है।'
+      : (msg || 'चीटशीट बनाने में समस्या हुई');
+    return res.status(statusCode).json({
+      error: userMessage,
+      isRateLimit,
     });
   }
 }

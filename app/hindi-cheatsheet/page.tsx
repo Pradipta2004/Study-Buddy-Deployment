@@ -293,7 +293,15 @@ export default function HindiCheatsheet() {
             {/* Error */}
             {error && (
               <div className="bg-red-50 border border-red-300 rounded-lg p-3 text-sm text-red-700">
-                ⚠️ {error}
+                <p>⚠️ {error}</p>
+                {(error.includes('rate limit') || error.includes('Rate limit') || error.includes('सीमा पूरी') || error.includes('429')) && (
+                  <button
+                    onClick={() => { setError(''); handleGenerate(); }}
+                    className="mt-2 bg-red-600 hover:bg-red-700 text-white text-xs font-medium px-4 py-1.5 rounded-lg transition-colors"
+                  >
+                    🔄 पुनः प्रयास करें
+                  </button>
+                )}
               </div>
             )}
 
