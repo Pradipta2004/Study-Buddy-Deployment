@@ -27,6 +27,7 @@ function sanitizeLatex(latex: string, language: string = 'english'): string {
     // Remove polyglossia — it forces Devanagari numbering which renders as boxes
     sanitized = sanitized.replace(/\\usepackage\{polyglossia\}\s*/g, '');
     sanitized = sanitized.replace(/\\setdefaultlanguage\{[^}]*\}\s*/g, '');
+    sanitized = sanitized.replace(/\\setmainlanguage\{[^}]*\}\s*/g, '');
     sanitized = sanitized.replace(/\\setotherlanguage\{[^}]*\}\s*/g, '');
 
     // Remove problematic font family declarations
@@ -34,10 +35,10 @@ function sanitizeLatex(latex: string, language: string = 'english'): string {
     sanitized = sanitized.replace(/\\newfontfamily\\englishfont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
     sanitized = sanitized.replace(/\\newfontfamily\\devanagarifont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
 
-    // Replace any \setmainfont with FreeSerif (handles both Latin + Devanagari)
-    sanitized = sanitized.replace(/\\setmainfont\{[^}]*\}(\[[^\]]*\])?/g, '\\setmainfont{FreeSerif}');
+    // Replace any \setmainfont — use Noto Sans Devanagari with HarfBuzz renderer for proper conjuncts
+    sanitized = sanitized.replace(/\\setmainfont\{[^}]*\}(\[[^\]]*\])?/g, '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
     // Also handle \setmainfont with options before font name: \setmainfont[...]{...}
-    sanitized = sanitized.replace(/\\setmainfont\[[^\]]*\]\{[^}]*\}/g, '\\setmainfont{FreeSerif}');
+    sanitized = sanitized.replace(/\\setmainfont\[[^\]]*\]\{[^}]*\}/g, '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
 
     // Remove polyglossia language-switch commands from body text
     sanitized = sanitized.replace(/\\textenglish\{([^}]*)\}/g, '$1');
@@ -47,10 +48,10 @@ function sanitizeLatex(latex: string, language: string = 'english'): string {
 
     // Ensure \usepackage{fontspec} and \setmainfont exist
     if (!sanitized.includes('\\usepackage{fontspec}')) {
-      sanitized = sanitized.replace(/\\documentclass(\[[^\]]*\])?\{[^}]*\}/, '$&\n\\usepackage{fontspec}\n\\setmainfont{FreeSerif}');
+      sanitized = sanitized.replace(/\\documentclass(\[[^\]]*\])?\{[^}]*\}/, '$&\n\\usepackage{fontspec}\n\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
     }
     if (!sanitized.includes('\\setmainfont')) {
-      sanitized = sanitized.replace(/\\usepackage\{fontspec\}/, '$&\n\\setmainfont{FreeSerif}');
+      sanitized = sanitized.replace(/\\usepackage\{fontspec\}/, '$&\n\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
     }
 
     // Remove \ce{} commands (mhchem not loaded) — convert to plain text math
@@ -358,11 +359,10 @@ export default async function handler(
     console.log(`Processed LaTeX length: ${processedLatex.length}, includeSolutions: ${includeSolutions}`);
 
     try {
-      // Compile LaTeX to PDF using external service
-      // For Hindi (Devanagari script), use lualatex first since pdflatex can't handle Unicode fonts
+      // For Hindi (Devanagari script), use xelatex first (best for complex script conjuncts)
       // For English, try pdflatex first (faster, more compatible), fallback to lualatex
       const isHindiLang = language === 'hindi';
-      const compilers = isHindiLang ? ['lualatex', 'pdflatex'] : ['pdflatex', 'lualatex'];
+      const compilers = isHindiLang ? ['xelatex', 'lualatex'] : ['pdflatex', 'lualatex'];
       let pdfData: Buffer | null = null;
       let lastError = '';
 

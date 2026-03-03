@@ -181,25 +181,27 @@ For EVERY question in the paper, list it in order:
 Q[number] ([marks] marks):
 - Type: [MCQ / Fill-in-blank / True-False / Column-Matching / Numerical / Short-Answer / Long-Answer / Descriptive / Assertion-Reason / Diagram-based / Proof / Derivation / Case-study]
 - Sub-parts: [if the question has sub-parts (a), (b), (c) etc., list each sub-part's type separately]
-  (a) Type: [type] — Brief description of what is asked
-  (b) Type: [type] — Brief description of what is asked
+  (a) Type: [type] — Generic description of what KIND of thing is asked (e.g., "definition question", "numerical calculation", "conceptual MCQ")
+  (b) Type: [type] — Generic description of what KIND of thing is asked
 - Section: [which section this belongs to, e.g., Section A, Section B]
 - Has OR/choice: [Yes/No — if there's an alternative question]
-- Sample text: [Include the actual question text, preserving math with $...$ notation]
+- Question format: [Describe the FORMAT only — e.g., "MCQ with 4 options", "fill-in-the-blank sentence", "long answer with diagram", "match 5 items in two columns". Do NOT include the actual question text or subject-specific content]
+
+⚠️ CRITICAL: Do NOT include the actual question text, subject-specific terms, or topic content from the paper. Only describe the STRUCTURE and FORMAT of each question. The subject/topic of this paper is IRRELEVANT — we only need the structural blueprint.
 
 Example:
 Q1 (1 mark):
 - Type: MCQ
 - Section: Section A
 - Has OR/choice: No
-- Sample text: Which of the following is a prime number? (a) 4 (b) 7 (c) 9 (d) 12
+- Question format: MCQ with 4 options labeled (a)-(d)
 
 Q5 (5 marks):
 - Sub-parts:
-  (a) Type: Numerical — Calculate the area
-  (b) Type: True-False — State whether the statement is true or false
-  (c) Type: Column-Matching — Match Column A with Column B
-  (d) Type: Short-Answer — Define the term
+  (a) Type: Numerical — Calculation problem
+  (b) Type: True-False — Statement to evaluate
+  (c) Type: Column-Matching — Match 5 items in two columns
+  (d) Type: Short-Answer — Definition question
 - Section: Section C
 - Has OR/choice: Yes (OR with Q6)
 
@@ -643,9 +645,9 @@ HINDI TEXT EXAMPLES:
 
 LaTeX TEMPLATE FOR HINDI:
 - Use \\documentclass[12pt,a4paper]{article} 
-- Use \\usepackage{fontspec} and \\setmainfont{FreeSerif}
+- Use \\usepackage{fontspec} and \\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]
 - Do NOT use polyglossia package — it breaks numbering
-- Do NOT use Noto Sans Devanagari — use FreeSerif (supports both Latin and Devanagari)
+- Noto Sans Devanagari supports both Devanagari conjuncts and Latin characters
 - Do NOT use inputenc or fontenc packages (they conflict with fontspec)
 - Do NOT use \\texthindi{}, \\textenglish{}, or any language-switch commands
 - Use standard LaTeX numbering — do NOT convert numbers to Devanagari
@@ -804,11 +806,7 @@ CRITICAL PRINCIPLE #5: SOLUTION QUALITY (MANDATORY FOR ALL)
   // Build Hindi-specific LaTeX preamble
   const hindiLatexPreamble = isHindi ? `\\documentclass[12pt,a4paper]{article}
 \\usepackage{fontspec}
-\\usepackage{polyglossia}
-\\setdefaultlanguage{hindi}
-\\setotherlanguage{english}
-\\setmainfont{Noto Sans Devanagari}[Script=Devanagari]
-\\newfontfamily\\englishfont{Latin Modern Roman}
+\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]
 \\usepackage{amsmath}
 \\usepackage{amssymb}
 \\usepackage{geometry}
@@ -874,9 +872,16 @@ CRITICAL PRINCIPLE #5: SOLUTION QUALITY (MANDATORY FOR ALL)
   const prompt = patternText
     ? `You are an expert ${subject} educator and professional LaTeX exam paper creator.
 
-TASK: Generate a NEW exam question paper that EXACTLY replicates the structure and format described in the pattern analysis below.
+TASK: Generate a NEW ${subject.toUpperCase()} exam question paper that replicates the STRUCTURE and FORMAT described in the pattern analysis below, but with content ENTIRELY from the attached PDF textbook.
 
-⚠️ ABSOLUTE RULE: Generate questions EXCLUSIVELY from the attached PDF textbook. Do NOT use your own knowledge, training data, or any external source. Every question must be directly based on content, examples, exercises, or topics found in the uploaded PDF. If a topic is not in the PDF, do NOT include it.
+⚠️ ABSOLUTE RULE — CONTENT SOURCE: Generate questions EXCLUSIVELY from the attached PDF textbook. Do NOT use your own knowledge, training data, or any external source. Every question must be directly based on content, examples, exercises, or topics found in the uploaded PDF. If a topic is not in the PDF, do NOT include it.
+
+⚠️ ABSOLUTE RULE — PATTERN IS STRUCTURE ONLY: The pattern analysis below describes the FORMAT of a question paper (number of sections, question types, marks distribution, formatting). It may be from a COMPLETELY DIFFERENT SUBJECT than what you need to generate. IGNORE any subject matter, topic references, or sample content from the pattern. Use the pattern ONLY to understand:
+- How many sections and questions to create
+- What TYPE each question should be (MCQ, fill-in-blank, long-answer, etc.)
+- Marks distribution and formatting style
+- Section organization and numbering
+The SUBJECT of the questions MUST be ${subject.toUpperCase()} — taken from the attached textbook PDF.
 
 ${hindiLanguageDirective}
 
@@ -884,9 +889,9 @@ ${universalQualityDirective}
 
 ${guidelines}
 
-=== QUESTION PAPER PATTERN ANALYSIS ===
+=== QUESTION PAPER STRUCTURAL PATTERN (FORMAT ONLY — ignore any subject content) ===
 ${patternText}
-=== END OF PATTERN ANALYSIS ===
+=== END OF STRUCTURAL PATTERN ===
 
 Read the attached PDF textbook THOROUGHLY from FIRST page to LAST page — identify ALL chapters, units, and sections. Pay special attention to:
 - EXERCISE/PRACTICE sections at the end of each chapter
@@ -900,7 +905,7 @@ GENERATION RULES:
 1. Create a COMPLETE, compilable LaTeX document (\\documentclass through \\end{document})
 2. QUESTION-BY-QUESTION TYPE MATCHING: For every question in the pattern, generate the SAME type at the SAME position
 3. Match the pattern's structure EXACTLY: sections, question counts, marks distribution
-4. Generate NEW, INNOVATIVE questions INSPIRED BY the exercise/practice sections of the textbook — do NOT copy pattern questions
+4. Generate NEW, INNOVATIVE ${subject.toUpperCase()} questions INSPIRED BY the exercise/practice sections of the textbook — do NOT copy pattern questions, and IGNORE the pattern's subject matter entirely. The pattern may be from a different subject; only use it for FORMAT.
 5. Difficulty level: ${difficulty} (but NEVER below moderate for secondary/higher-secondary)
 6. **MANDATORY**: Distribute questions EQUALLY across ALL chapters/topics. If the textbook has N chapters, each chapter MUST have approximately (Total Questions / N) questions. No chapter should have 0 questions.
 7. **PRIORITY SOURCE**: Questions should primarily come from exercise sections, solved examples, and important problems — NOT from introductory paragraphs or definitions on the first page.
@@ -908,7 +913,7 @@ GENERATION RULES:
    % START SOLUTION
    [Step-by-step solution with detailed working${isHindi ? ' in Hindi' : ''}]
    % END SOLUTION
-9. Use proper LaTeX: ${isHindi ? 'fontspec, polyglossia, ' : ''}amsmath, amssymb, geometry, enumitem, fancyhdr, array, tabularx${isHindi ? '. Use \\\\documentclass[12pt,a4paper]{article} with \\\\usepackage{fontspec} and \\\\setmainfont{Noto Sans Devanagari} for Hindi support. Compile with LuaLaTeX.' : ''}
+9. Use proper LaTeX: ${isHindi ? 'fontspec, ' : ''}amsmath, amssymb, geometry, enumitem, fancyhdr, array, tabularx${isHindi ? '. Use \\\\documentclass[12pt,a4paper]{article} with \\\\usepackage{fontspec} and \\\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz] for Hindi support. Do NOT use polyglossia. Compile with XeLaTeX or LuaLaTeX.' : ''}
 10. Use $...$ for inline math, \\[...\\] for display math (avoid $$ which can cause alignment issues)
 11. For MCQs: use \\begin{enumerate}[label=(\\alph*), leftmargin=2em] for perfectly aligned options
 12. For fill-in-blanks: use \\underline{\\hspace{3cm}}
@@ -1001,7 +1006,7 @@ CRITICAL FORMATTING & ALIGNMENT RULES:
 - Use $...$ for inline math, \\[...\\] for display math (NOT $$ which can cause alignment issues)
 - Wrap EVERY solution with % START SOLUTION and % END SOLUTION
 - Number questions consecutively starting from 1
-- Ensure NO orphaned lines or page breaks in the middle of a question${isHindi ? '\n- Use \\\\documentclass[12pt,a4paper]{article} with \\\\usepackage{fontspec}, \\\\usepackage{polyglossia}, \\\\setdefaultlanguage{hindi}, \\\\setmainfont{Noto Sans Devanagari}[Script=Devanagari]\n- Do NOT use inputenc or fontenc packages\n- ALL text content (questions, solutions, headers, instructions) MUST be in Hindi Devanagari script\n- Only mathematical formulas, chemical symbols, and units should remain in English/Latin script' : ''}
+- Ensure NO orphaned lines or page breaks in the middle of a question${isHindi ? '\n- Use \\\\documentclass[12pt,a4paper]{article} with \\\\usepackage{fontspec} and \\\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]\n- Do NOT use polyglossia, inputenc, or fontenc packages\n- ALL text content (questions, solutions, headers, instructions) MUST be in Hindi Devanagari script\n- Only mathematical formulas, chemical symbols, and units should remain in English/Latin script' : ''}
 
 IMPORTANT: Output ONLY the complete LaTeX document. No markdown, no code fences.`;
 
@@ -1109,7 +1114,7 @@ MANDATORY RULES:
 2. ALL solution/answer text MUST be in Hindi using Devanagari script
 3. ALL instructions, headers, section titles MUST be in Hindi
 4. MCQ options, True/False, Fill-in-blanks, Column matching — ALL in Hindi
-5. Use \\documentclass[12pt,a4paper]{article} with \\usepackage{fontspec}, \\usepackage{polyglossia}, \\setdefaultlanguage{hindi}, \\setmainfont{Noto Sans Devanagari}[Script=Devanagari]
+5. Use \\documentclass[12pt,a4paper]{article} with \\usepackage{fontspec} and \\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]. Do NOT use polyglossia.
 6. Do NOT use inputenc or fontenc packages
 
 EXCEPTIONS (keep in English/original):
@@ -1628,15 +1633,22 @@ EXAMPLES OF EXAM-STANDARD QUESTIONS:
 `;
 
   const patternSection = patternText
-    ? `\n\n=== QUESTION PAPER PATTERN ANALYSIS ===\n\n${patternText}\n\n=== END OF PATTERN ANALYSIS ===`
+    ? `\n\n=== QUESTION PAPER STRUCTURAL PATTERN (FORMAT ONLY — ignore any subject content) ===\n\n${patternText}\n\n=== END OF STRUCTURAL PATTERN ===`
     : '';
 
   const prompt = patternText
     ? `You are an expert ${subject} educator and professional LaTeX exam paper creator.
 
-TASK: Generate a NEW exam question paper that EXACTLY replicates the structure and format described in the pattern analysis below.
+TASK: Generate a NEW ${subject.toUpperCase()} exam question paper that replicates the STRUCTURE and FORMAT described in the pattern analysis below, but with content ENTIRELY from the textbook provided.
 
-⚠️ ABSOLUTE RULE: Generate questions EXCLUSIVELY from the textbook content provided below. Do NOT use your own knowledge, training data, or any external source. Every single question must be directly traceable to content in the textbook. If a topic is not in the textbook content below, do NOT include questions about it.
+⚠️ ABSOLUTE RULE — CONTENT SOURCE: Generate questions EXCLUSIVELY from the textbook content provided below. Do NOT use your own knowledge, training data, or any external source. Every single question must be directly traceable to content in the textbook. If a topic is not in the textbook content below, do NOT include questions about it.
+
+⚠️ ABSOLUTE RULE — PATTERN IS STRUCTURE ONLY: The pattern analysis below describes the FORMAT of a question paper (sections, question types, marks, formatting). It may be from a COMPLETELY DIFFERENT SUBJECT. IGNORE any subject matter, topic references, or sample content from the pattern. Use the pattern ONLY to understand:
+- How many sections and questions to create
+- What TYPE each question should be (MCQ, fill-in-blank, long-answer, etc.)
+- Marks distribution and formatting style
+- Section organization and numbering
+The SUBJECT of the questions MUST be ${subject.toUpperCase()} — taken from the textbook content below.
 
 ${hindiDirective2}
 
@@ -1657,7 +1669,7 @@ GENERATION RULES:
    - This applies to EVERY question and EVERY sub-part. No exceptions.
 3. Match the pattern's structure EXACTLY: same sections, same number of questions per section, same marks distribution
 4. Replicate the pattern's formatting: same numbering style, same marks display format, same header/instruction layout
-5. Generate NEW questions primarily INSPIRED BY exercise/practice sections, solved examples, and important problems from the textbook content — do NOT copy the sample questions from the pattern
+5. Generate NEW ${subject.toUpperCase()} questions INSPIRED BY exercise/practice sections, solved examples, and important problems from the TEXTBOOK content — do NOT copy or reference the sample questions from the pattern, and IGNORE the pattern's subject matter entirely
 6. Match the difficulty level: ${difficulty} (MINIMUM moderate level for secondary/higher-secondary students — no basic recall questions)
 7. Distribute questions STRICTLY EVENLY across all chapters/topics in the textbook content. If N chapters exist, each chapter gets approximately (Total Questions / N) questions. No chapter should have 0 questions.
 8. **EXERCISE PRIORITY**: At least 70% of questions should be inspired by exercise/practice section problems from the textbook, not introductory text.
@@ -1712,14 +1724,9 @@ Format your response ENTIRELY in LaTeX using this EXACT structure for a proper e
 
 ${isHindi2 ? `\\documentclass[12pt,a4paper]{article}
 \\usepackage{fontspec}
-\\usepackage{polyglossia}
-\\setmainlanguage{hindi}
-\\setotherlanguage{english}
-\\newfontfamily\\hindifont{Noto Sans Devanagari}[Script=Devanagari]
-\\newfontfamily\\englishfont{Latin Modern Roman}
+\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]
 \\usepackage{amsmath}
 \\usepackage{amssymb}
-\\usepackage{unicode-math}
 \\usepackage{geometry}
 \\usepackage{enumitem}
 \\usepackage{fancyhdr}

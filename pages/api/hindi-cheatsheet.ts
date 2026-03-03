@@ -290,7 +290,7 @@ Generate a COMPLETE, COMPILABLE LaTeX document using this EXACT preamble:
 
 \\documentclass[10pt,a4paper]{article}
 \\usepackage{fontspec}
-\\setmainfont{FreeSerif}
+\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]
 \\usepackage[margin=1.5cm]{geometry}
 \\usepackage{amsmath,amssymb}
 \\usepackage{enumitem}
@@ -387,7 +387,7 @@ FORMATTING RULES:
 8. Ensure EVERY \\begin{} has a matching \\end{}
 9. Ensure EVERY { has a matching }
 10. Use \\newpage between chapters
-11. English text mixed with Hindi is fine — FreeSerif font supports BOTH Latin and Devanagari characters
+11. English text mixed with Hindi is fine — Noto Sans Devanagari font supports BOTH Latin and Devanagari characters with proper conjuncts
 12. Do NOT use \\textenglish{}, \\texthindi{}, or any polyglossia commands
 13. For chemical equations, use LaTeX math: $\\text{reactant} \\rightarrow \\text{product}$
 14. Do NOT use \\ce{} command (mhchem package is NOT loaded)
@@ -418,7 +418,7 @@ function wrapInLatexDocument(content: string, subject: string, studentClass: str
 
   return `\\documentclass[10pt,a4paper]{article}
 \\usepackage{fontspec}
-\\setmainfont{FreeSerif}
+\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]
 \\usepackage[margin=1.5cm]{geometry}
 \\usepackage{amsmath,amssymb}
 \\usepackage{enumitem}
