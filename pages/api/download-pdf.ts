@@ -35,10 +35,10 @@ function sanitizeLatex(latex: string, language: string = 'english'): string {
     sanitized = sanitized.replace(/\\newfontfamily\\englishfont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
     sanitized = sanitized.replace(/\\newfontfamily\\devanagarifont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
 
-    // Replace any \setmainfont — use Noto Sans Devanagari with HarfBuzz renderer for proper conjuncts
-    sanitized = sanitized.replace(/\\setmainfont\{[^}]*\}(\[[^\]]*\])?/g, '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
-    // Also handle \setmainfont with options before font name: \setmainfont[...]{...}
-    sanitized = sanitized.replace(/\\setmainfont\[[^\]]*\]\{[^}]*\}/g, '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
+    // Remove any existing \setmainfont and \usepackage{fontspec} — we'll add our own
+    sanitized = sanitized.replace(/\\setmainfont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
+    sanitized = sanitized.replace(/\\setmainfont\[[^\]]*\]\{[^}]*\}\s*/g, '');
+    sanitized = sanitized.replace(/\\usepackage\{fontspec\}\s*/g, '');
 
     // Remove polyglossia language-switch commands from body text
     sanitized = sanitized.replace(/\\textenglish\{([^}]*)\}/g, '$1');
@@ -46,13 +46,32 @@ function sanitizeLatex(latex: string, language: string = 'english'): string {
     sanitized = sanitized.replace(/\\begin\{english\}/g, '');
     sanitized = sanitized.replace(/\\end\{english\}/g, '');
 
-    // Ensure \usepackage{fontspec} and \setmainfont exist
-    if (!sanitized.includes('\\usepackage{fontspec}')) {
-      sanitized = sanitized.replace(/\\documentclass(\[[^\]]*\])?\{[^}]*\}/, '$&\n\\usepackage{fontspec}\n\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
-    }
-    if (!sanitized.includes('\\setmainfont')) {
-      sanitized = sanitized.replace(/\\usepackage\{fontspec\}/, '$&\n\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
-    }
+    // Build proper font setup with LuaLaTeX fallback for Latin characters
+    // Noto Sans Devanagari doesn't have Latin letter glyphs (A-Z, a-z)
+    // so we use Latin Modern Roman as fallback via luaotfload
+    const hindiFontBlock = [
+      '\\usepackage{fontspec}',
+      '\\ifdefined\\directlua',
+      '\\directlua{luaotfload.add_fallback("latinfb",{"lmroman10-regular:"})}',
+      '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari,Renderer=HarfBuzz,RawFeature={fallback=latinfb}]',
+      '\\else',
+      '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari,Renderer=HarfBuzz]',
+      '\\fi',
+      '\\renewcommand{\\labelitemi}{$\\bullet$}',
+    ].join('\n');
+
+    // Insert font setup after \documentclass
+    sanitized = sanitized.replace(
+      /\\documentclass(\[[^\]]*\])?\{[^}]*\}/,
+      (match) => match + '\n' + hindiFontBlock
+    );
+
+    // For Hindi: replace alphabetic enumerate labels with numeric (Latin letters cause boxes)
+    sanitized = sanitized.replace(/label=\(\\alph\*\)/g, 'label=(\\arabic*)');
+    sanitized = sanitized.replace(/label=\\alph\*\)/g, 'label=\\arabic*)');
+    // Also fix roman numeral labels
+    sanitized = sanitized.replace(/label=\(\\roman\*\)/g, 'label=(\\arabic*)');
+    sanitized = sanitized.replace(/label=\\roman\*\)/g, 'label=\\arabic*)');
 
     // Remove \ce{} commands (mhchem not loaded) — convert to plain text math
     sanitized = sanitized.replace(/\\ce\{([^}]*)\}/g, (_, content) => {
@@ -188,6 +207,7 @@ function restructureWithSolutionsAtEnd(latex: string, language: string = 'englis
     const textBefore = lines.slice(0, block.startLine).join('\n');
 
     // Multiple question-heading patterns Gemini may use (English and Hindi)
+    // \d matches ASCII digits, [०-९] matches Devanagari digits
     const qRegexes = [
       /\\subsection\*\{(?:Question|Q\.?)\s*(\d+)/g,
       /\\textbf\{(?:Question|Q\.?)\s*(\d+)/g,
@@ -196,10 +216,14 @@ function restructureWithSolutionsAtEnd(latex: string, language: string = 'englis
       /\\textbf\{(\d+)\./g,              // \textbf{1.  ...}
       /\\noindent\s*(\d+)\.\s*\\textbf/g, // 1. \textbf{...}
       /\\section\*\{(?:Question|Q\.?)\s*(\d+)/g,
-      // Hindi question headers
+      // Hindi question headers (ASCII digits)
       /\\subsection\*\{प्रश्न\s*(\d+)/g,
       /\\textbf\{प्रश्न\s*(\d+)/g,
       /\\noindent\s*\\textbf\{प्रश्न\s*(\d+)/g,
+      // Hindi question headers (Devanagari digits: ०-९)
+      /\\subsection\*\{प्रश्न\s*([०-९]+)/g,
+      /\\textbf\{प्रश्न\s*([०-९]+)/g,
+      /\\noindent\s*\\textbf\{प्रश्न\s*([०-९]+)/g,
     ];
 
     let qNum = '';
@@ -359,10 +383,10 @@ export default async function handler(
     console.log(`Processed LaTeX length: ${processedLatex.length}, includeSolutions: ${includeSolutions}`);
 
     try {
-      // For Hindi (Devanagari script), use xelatex first (best for complex script conjuncts)
+      // For Hindi (Devanagari script), use lualatex first (supports font fallback for Latin chars)
       // For English, try pdflatex first (faster, more compatible), fallback to lualatex
       const isHindiLang = language === 'hindi';
-      const compilers = isHindiLang ? ['xelatex', 'lualatex'] : ['pdflatex', 'lualatex'];
+      const compilers = isHindiLang ? ['lualatex', 'xelatex'] : ['pdflatex', 'lualatex'];
       let pdfData: Buffer | null = null;
       let lastError = '';
 

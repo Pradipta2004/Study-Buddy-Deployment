@@ -38,9 +38,7 @@ function sanitizeLatex(latex: string): string {
   sanitized = sanitized.replace(/\\begin\{multicols\}\{[^}]*\}/g, '');
   sanitized = sanitized.replace(/\\end\{multicols\}/g, '');
 
-  // === FIX FONT SETUP: Remove polyglossia (causes boxes/bad numbering), use Noto Sans Devanagari ===
-  // Polyglossia forces Devanagari numbering & script rules on English text → boxes. Remove it.
-  // Noto Sans Devanagari has proper conjunct/ligature OT tables AND covers Basic Latin.
+  // === FIX FONT SETUP: Remove polyglossia, set up proper fallback for Latin + Devanagari ===
   sanitized = sanitized.replace(/\\usepackage\{polyglossia\}\s*/g, '');
   sanitized = sanitized.replace(/\\setdefaultlanguage\{[^}]*\}\s*/g, '');
   sanitized = sanitized.replace(/\\setmainlanguage\{[^}]*\}\s*/g, '');
@@ -48,22 +46,41 @@ function sanitizeLatex(latex: string): string {
   sanitized = sanitized.replace(/\\newfontfamily\\hindifont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
   sanitized = sanitized.replace(/\\newfontfamily\\englishfont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
   sanitized = sanitized.replace(/\\newfontfamily\\devanagarifont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
-  // Replace any \setmainfont — use Noto Sans Devanagari with HarfBuzz renderer for proper conjuncts
-  sanitized = sanitized.replace(/\\setmainfont\{[^}]*\}(\[[^\]]*\])?/g, '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
-  sanitized = sanitized.replace(/\\setmainfont\[[^\]]*\]\{[^}]*\}/g, '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
+
+  // Remove any existing \setmainfont and \usepackage{fontspec} — we'll add our own
+  sanitized = sanitized.replace(/\\setmainfont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
+  sanitized = sanitized.replace(/\\setmainfont\[[^\]]*\]\{[^}]*\}\s*/g, '');
+  sanitized = sanitized.replace(/\\usepackage\{fontspec\}\s*/g, '');
+
   // Remove polyglossia language-switch commands from body text
   sanitized = sanitized.replace(/\\textenglish\{([^}]*)\}/g, '$1');
   sanitized = sanitized.replace(/\\texthi(ndi)?\{([^}]*)\}/g, '$2');
   sanitized = sanitized.replace(/\\begin\{english\}/g, '');
   sanitized = sanitized.replace(/\\end\{english\}/g, '');
 
-  // Ensure \usepackage{fontspec} and \setmainfont exist
-  if (!sanitized.includes('\\usepackage{fontspec}')) {
-    sanitized = sanitized.replace(/\\documentclass(\[[^\]]*\])?\{[^}]*\}/, '$&\n\\usepackage{fontspec}\n\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
-  }
-  if (!sanitized.includes('\\setmainfont')) {
-    sanitized = sanitized.replace(/\\usepackage\{fontspec\}/, '$&\n\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
-  }
+  // Build proper font setup with LuaLaTeX fallback for Latin characters
+  const hindiFontBlock = [
+    '\\usepackage{fontspec}',
+    '\\ifdefined\\directlua',
+    '\\directlua{luaotfload.add_fallback("latinfb",{"lmroman10-regular:"})}',
+    '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari,Renderer=HarfBuzz,RawFeature={fallback=latinfb}]',
+    '\\else',
+    '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari,Renderer=HarfBuzz]',
+    '\\fi',
+    '\\renewcommand{\\labelitemi}{$\\bullet$}',
+  ].join('\n');
+
+  // Insert font setup after \documentclass
+  sanitized = sanitized.replace(
+    /\\documentclass(\[[^\]]*\])?\{[^}]*\}/,
+    (match) => match + '\n' + hindiFontBlock
+  );
+
+  // For Hindi: replace alphabetic/roman enumerate labels with numeric
+  sanitized = sanitized.replace(/label=\(\\alph\*\)/g, 'label=(\\arabic*)');
+  sanitized = sanitized.replace(/label=\\alph\*\)/g, 'label=\\arabic*)');
+  sanitized = sanitized.replace(/label=\(\\roman\*\)/g, 'label=(\\arabic*)');
+  sanitized = sanitized.replace(/label=\\roman\*\)/g, 'label=\\arabic*)');
 
   // Ensure document has \end{document}
   if (sanitized.includes('\\begin{document}') && !sanitized.includes('\\end{document}')) {
@@ -150,8 +167,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`Hindi PDF: Compiling LaTeX (${processedLatex.length} chars) with lualatex...`);
 
-    // Compile with xelatex first (best for Devanagari conjuncts), fallback to lualatex
-    const compilers = ['xelatex', 'lualatex'];
+    // Compile with lualatex first (supports font fallback for Latin chars), fallback to xelatex
+    const compilers = ['lualatex', 'xelatex'];
     let pdfData: Buffer | null = null;
     let lastError = '';
 
