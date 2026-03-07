@@ -349,7 +349,8 @@ Mark exercise/practice sections clearly with headers like [EXERCISE - Chapter X]
 async function generateQuestionsDirectFromPDF(
   filePath: string,
   metadata: PDFMetadata,
-  patternText?: string
+  patternText?: string,
+  extractedText?: string
 ): Promise<ExtractionResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -894,7 +895,19 @@ Generate questions EXCLUSIVELY from the attached PDF textbook. Do NOT use your o
 - Prioritize EXERCISE/PRACTICE sections and Solved Examples
 - Distribute questions EVENLY across ALL chapters (each chapter gets ≈ Total/N questions)
 - Difficulty: ${difficulty} — questions must be moderate-to-difficult, exam-standard
+${isHindi && extractedText ? `
+⚠️ CRITICAL — HINDI TEXTBOOK CONTENT ANCHORING (MANDATORY):
+The textbook content has been extracted below. You MUST generate questions ONLY from this content.
+If the textbook is in English, translate the concepts to Hindi for the questions.
+Do NOT generate questions from your own knowledge — ONLY from what appears in this textbook.
+If a topic is NOT in the textbook below, do NOT create questions about it.
 
+--- TEXTBOOK CONTENT START ---
+${extractedText}
+--- TEXTBOOK CONTENT END ---
+
+Verify EACH question: "Is this topic present in the textbook above?" If NO → discard and replace.
+` : ''}
 ╔══════════════════════════════════════════════════════════════════════╗
 ║  #3 LaTeX OUTPUT RULES                                             ║
 ╚══════════════════════════════════════════════════════════════════════╝
@@ -937,7 +950,19 @@ Generate questions EXCLUSIVELY from the attached PDF textbook. Do NOT use your o
 - Distribute questions EVENLY across ALL chapters (each chapter gets ≈ Total/N questions)
 - Difficulty: ${difficulty} — questions must be moderate-to-difficult, exam-standard
 - Each question must require multi-step thinking, analysis, or calculation — NOT basic definitions
+${isHindi && extractedText ? `
+⚠️ CRITICAL — HINDI TEXTBOOK CONTENT ANCHORING (MANDATORY):
+The textbook content has been extracted below. You MUST generate questions ONLY from this content.
+If the textbook is in English, translate the concepts to Hindi for the questions.
+Do NOT generate questions from your own knowledge — ONLY from what appears in this textbook.
+If a topic is NOT in the textbook below, do NOT create questions about it.
 
+--- TEXTBOOK CONTENT START ---
+${extractedText}
+--- TEXTBOOK CONTENT END ---
+
+Verify EACH question: "Is this topic present in the textbook above?" If NO → discard and replace.
+` : ''}
 ╔══════════════════════════════════════════════════════════════════════╗
 ║  #3 LaTeX OUTPUT FORMAT                                            ║
 ╚══════════════════════════════════════════════════════════════════════╝
@@ -1838,10 +1863,34 @@ export default async function handler(
             await delay(2000);
           }
 
+          // For Hindi, extract text first to anchor content in the prompt
+          let extractedText: string | undefined;
+          if (metadata.language === 'hindi') {
+            console.log('Hindi mode: Extracting text from PDF for content anchoring...');
+            try {
+              const extractResult = await withRetry(
+                () => extractTextFromPDF(filePath),
+                { maxRetries: 1, baseDelay: 4000, label: 'hindi-text-extraction' }
+              );
+              // Truncate to avoid extremely long prompts
+              const truncated = truncateForPrompt(extractResult.text, 80000, 'textbook');
+              extractedText = truncated.text;
+              tokenStats.extraction = extractResult.tokens;
+              console.log(`Hindi text extraction complete. Length: ${extractedText.length} chars (truncated: ${truncated.truncated})`);
+
+              // Small delay to avoid rate limits
+              console.log('Waiting 2s before generation to avoid rate limits...');
+              await delay(2000);
+            } catch (extractError: any) {
+              console.warn('Hindi text extraction failed, proceeding without it:', extractError.message);
+              // Continue without extracted text — the PDF is still sent as binary
+            }
+          }
+
           // Send PDF directly to Gemini with the question generation prompt
           console.log('Sending PDF directly to Gemini for question generation...');
           const genResult = await withRetry(
-            () => generateQuestionsDirectFromPDF(filePath, metadata, patternText),
+            () => generateQuestionsDirectFromPDF(filePath, metadata, patternText, extractedText),
             { maxRetries: 1, baseDelay: 5000, label: 'direct-pdf-generation' }
           );
           latexContent = genResult.text;
