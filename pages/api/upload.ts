@@ -369,7 +369,12 @@ async function generateQuestionsDirectFromPDF(
   const base64Data = dataBuffer.toString('base64');
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    generationConfig: {
+      maxOutputTokens: 65536,
+    },
+  });
 
   const subject = metadata.subject || 'mathematics';
   const questionTypes = metadata.questionTypes || ['problem-solving', 'conceptual', 'application'];
@@ -1025,13 +1030,22 @@ Output ONLY the complete LaTeX document. No markdown, no code fences.`;
   ]);
 
   const response = await result.response;
-  const responseText = response.text();
+  let responseText = response.text();
   
   const usage = response.usageMetadata;
-  console.log(`Direct PDF generation complete. Response length: ${responseText.length}. Tokens: ${usage?.totalTokenCount || 'N/A'}`);
+  const finishReason = response.candidates?.[0]?.finishReason;
+  console.log(`Direct PDF generation complete. Response length: ${responseText.length}. Tokens: ${usage?.totalTokenCount || 'N/A'}. Finish reason: ${finishReason || 'unknown'}`);
 
   if (!responseText || responseText.trim().length === 0) {
     throw new Error('Gemini returned empty response');
+  }
+
+  // If output was truncated (MAX_TOKENS), ensure LaTeX document is properly closed
+  if (finishReason === 'MAX_TOKENS' || finishReason === 'STOP' && !responseText.includes('\\end{document}')) {
+    if (!responseText.includes('\\end{document}')) {
+      console.warn('Output appears truncated — appending \\end{document}');
+      responseText = responseText + '\n\n\\end{document}\n';
+    }
   }
 
   return {
@@ -1055,7 +1069,12 @@ async function generateQuestionsWithGemini(
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    generationConfig: {
+      maxOutputTokens: 65536,
+    },
+  });
 
   const subject = metadata.subject || 'mathematics';
   const questionTypes = metadata.questionTypes || ['problem-solving', 'conceptual', 'application'];
@@ -1752,13 +1771,22 @@ Output ONLY the complete LaTeX document. No markdown, no explanations, no code f
   ]);
   
   const response = await result.response;
-  const responseText = response.text();
+  let responseText = response.text();
   
   const usage = response.usageMetadata;
-  console.log(`Received response from Gemini. Length: ${responseText.length}. Tokens: ${usage?.totalTokenCount || 'N/A'}`);
+  const finishReason = response.candidates?.[0]?.finishReason;
+  console.log(`Received response from Gemini. Length: ${responseText.length}. Tokens: ${usage?.totalTokenCount || 'N/A'}. Finish reason: ${finishReason || 'unknown'}`);
   
   if (!responseText || responseText.trim().length === 0) {
     throw new Error('Gemini returned empty response');
+  }
+
+  // If output was truncated (MAX_TOKENS), ensure LaTeX document is properly closed
+  if (finishReason === 'MAX_TOKENS' || finishReason === 'STOP' && !responseText.includes('\\end{document}')) {
+    if (!responseText.includes('\\end{document}')) {
+      console.warn('Output appears truncated — appending \\end{document}');
+      responseText = responseText + '\n\n\\end{document}\n';
+    }
   }
   
   return { text: responseText, tokens: { promptTokens: usage?.promptTokenCount || 0, outputTokens: usage?.candidatesTokenCount || 0, totalTokens: usage?.totalTokenCount || 0 } };

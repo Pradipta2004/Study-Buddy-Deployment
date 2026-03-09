@@ -98,9 +98,36 @@ function sanitizeLatex(latex: string, language: string = 'english'): string {
 /**
  * Fix unbalanced LaTeX environments that can cause compilation errors.
  * This checks for unclosed begin/end pairs and tries to repair them.
+ * Also handles truncated output where content ends abruptly mid-command.
  */
 function fixUnbalancedEnvironments(latex: string): string {
   let fixed = latex;
+
+  // If the document doesn't have \end{document}, it was truncated — add it
+  if (fixed.includes('\\begin{document}') && !fixed.includes('\\end{document}')) {
+    fixed += '\n\\end{document}\n';
+  }
+
+  // Remove the last incomplete line if it appears to be truncated mid-command
+  // (e.g., line ending with an unclosed brace, backslash, or incomplete command)
+  const lines = fixed.split('\n');
+  const endDocIdx = lines.findIndex(l => l.trim() === '\\end{document}');
+  if (endDocIdx > 0) {
+    // Check the few lines before \end{document} for truncation artifacts
+    let checkIdx = endDocIdx - 1;
+    // Skip blank lines
+    while (checkIdx > 0 && lines[checkIdx].trim() === '') checkIdx--;
+    if (checkIdx > 0) {
+      const lastContentLine = lines[checkIdx].trim();
+      // If the last content line looks incomplete (ends with \, unclosed {, or is just a partial command)
+      if (lastContentLine.endsWith('\\') || 
+          lastContentLine.endsWith('{') ||
+          (lastContentLine.match(/\{/g) || []).length > (lastContentLine.match(/\}/g) || []).length) {
+        lines[checkIdx] = ''; // Remove the truncated line
+      }
+    }
+    fixed = lines.join('\n');
+  }
 
   // Count and fix unbalanced braces
   let braceDepth = 0;
