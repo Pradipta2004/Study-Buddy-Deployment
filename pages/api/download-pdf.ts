@@ -35,10 +35,27 @@ function sanitizeLatex(latex: string, language: string = 'english'): string {
     sanitized = sanitized.replace(/\\newfontfamily\\englishfont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
     sanitized = sanitized.replace(/\\newfontfamily\\devanagarifont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
 
-    // Remove any existing \setmainfont and \usepackage{fontspec} — we'll add our own
+    // Remove any existing fontspec, amsmath, amssymb packages — we'll add them properly in the font block
+    sanitized = sanitized.replace(/\\usepackage\{fontspec\}\s*/g, '');
+    sanitized = sanitized.replace(/\\usepackage\{amsmath\}\s*/g, '');
+    sanitized = sanitized.replace(/\\usepackage\{amssymb\}\s*/g, '');
+    sanitized = sanitized.replace(/\\usepackage\[([^\]]*)\]\{amsmath\}\s*/g, '');
+    sanitized = sanitized.replace(/\\usepackage\[([^\]]*)\]\{amssymb\}\s*/g, '');
+    sanitized = sanitized.replace(/\\usepackage\{[^}]*amsmath[^}]*\}\s*/g, '');
+    sanitized = sanitized.replace(/\\usepackage\{[^}]*amssymb[^}]*\}\s*/g, '');
+
+    // Remove previously injected operator overrides to avoid conflicts/duplication.
+    sanitized = sanitized.replace(/\\renewcommand\{\\sin\}\{[^}]*\}\s*/g, '');
+    sanitized = sanitized.replace(/\\renewcommand\{\\cos\}\{[^}]*\}\s*/g, '');
+    sanitized = sanitized.replace(/\\renewcommand\{\\tan\}\{[^}]*\}\s*/g, '');
+    sanitized = sanitized.replace(/\\renewcommand\{\\lim\}\{[^}]*\}\s*/g, '');
+    sanitized = sanitized.replace(/\\DeclareMathAlphabet\{\\mathrm\}\{[^\n]*\}\s*/g, '');
+    sanitized = sanitized.replace(/\\DeclareMathAlphabet\{\\mathit\}\{[^\n]*\}\s*/g, '');
+    sanitized = sanitized.replace(/\\DeclareMathAlphabet\{\\mathbf\}\{[^\n]*\}\s*/g, '');
+
+    // Remove any existing \setmainfont declarations
     sanitized = sanitized.replace(/\\setmainfont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
     sanitized = sanitized.replace(/\\setmainfont\[[^\]]*\]\{[^}]*\}\s*/g, '');
-    sanitized = sanitized.replace(/\\usepackage\{fontspec\}\s*/g, '');
 
     // Remove polyglossia language-switch commands from body text
     sanitized = sanitized.replace(/\\textenglish\{([^}]*)\}/g, '$1');
@@ -47,12 +64,16 @@ function sanitizeLatex(latex: string, language: string = 'english'): string {
     sanitized = sanitized.replace(/\\end\{english\}/g, '');
 
     // Build proper font setup with LuaLaTeX fallback for Latin characters
-    // Noto Sans Devanagari doesn't have Latin letter glyphs (A-Z, a-z)
-    // so we use Latin Modern Roman as fallback via luaotfload
+    // Noto Sans Devanagari doesn't have Latin letter glyphs (A-Z, a-z) or math symbols
+    // so we use Latin Modern Roman as fallback via luaotfload.
+    // Trig/limit operator overrides are injected later (before \begin{document})
+    // so they win even if downstream packages change math font settings.
     const hindiFontBlock = [
       '\\usepackage{fontspec}',
+      '\\usepackage{amsmath}',
+      '\\usepackage{amssymb}',
       '\\ifdefined\\directlua',
-      '\\directlua{luaotfload.add_fallback("latinfb",{"lmroman10-regular:"})}',
+      '\\directlua{luaotfload.add_fallback("latinfb",{"lmroman10-regular:","LMRoman10-Regular:"})}',
       '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari,Renderer=HarfBuzz,RawFeature={fallback=latinfb}]',
       '\\else',
       '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari,Renderer=HarfBuzz]',
@@ -66,6 +87,18 @@ function sanitizeLatex(latex: string, language: string = 'english'): string {
       (match) => match + '\n' + hindiFontBlock
     );
 
+    // Force robust trig/limit rendering near document start to survive later package redefinitions.
+    const operatorPatch = [
+      '\\ifdefined\\directlua',
+      '\\newfontfamily\\latinmathfont{Latin Modern Roman}[Renderer=HarfBuzz]',
+      '\\renewcommand{\\sin}{\\ensuremath{\\mathop{\\text{\\latinmathfont sin}}\\nolimits}}',
+      '\\renewcommand{\\cos}{\\ensuremath{\\mathop{\\text{\\latinmathfont cos}}\\nolimits}}',
+      '\\renewcommand{\\tan}{\\ensuremath{\\mathop{\\text{\\latinmathfont tan}}\\nolimits}}',
+      '\\renewcommand{\\lim}{\\ensuremath{\\mathop{\\text{\\latinmathfont lim}}\\nolimits}}',
+      '\\fi',
+    ].join('\\n');
+    sanitized = sanitized.replace(/\\begin\{document\}/, operatorPatch + '\n\\begin{document}');
+
     // For Hindi: replace alphabetic enumerate labels with numeric (Latin letters cause boxes)
     sanitized = sanitized.replace(/label=\(\\alph\*\)/g, 'label=(\\arabic*)');
     sanitized = sanitized.replace(/label=\\alph\*\)/g, 'label=\\arabic*)');
@@ -77,6 +110,10 @@ function sanitizeLatex(latex: string, language: string = 'english'): string {
     sanitized = sanitized.replace(/\\ce\{([^}]*)\}/g, (_, content) => {
       return `$\\text{${content}}$`;
     });
+
+    // Normalize plain function names emitted by the model into LaTeX operators.
+    // This prevents missing output when content contains "sin x" instead of "\\sin x".
+    sanitized = sanitized.replace(/(^|[^\\])\b(sin|cos|tan|lim)\b/gim, '$1\\$2');
 
     // Remove tcolorbox usage
     sanitized = sanitized.replace(/\\begin\{tcolorbox\}(\[[^\]]*\])?/g, '\\begin{center}\\rule{\\textwidth}{0.4pt}');
@@ -367,15 +404,20 @@ export default async function handler(
       return res.status(400).json({ error: 'No LaTeX content provided' });
     }
 
+    // Normalize language and auto-detect Hindi from content so fallback math fonts are always applied.
+    const normalizedLanguage = String(language || 'english').toLowerCase();
+    const hasDevanagariText = /[\u0900-\u097F]/.test(latex);
+    const effectiveLanguage = normalizedLanguage === 'hindi' || hasDevanagariText ? 'hindi' : 'english';
+
     // Process LaTeX to handle solutions placement
     let processedLatex = latex;
-    
-    // Sanitize LaTeX to fix common syntax errors (pass language for Hindi font fixes)
-    processedLatex = sanitizeLatex(processedLatex, language);
+
+    // Sanitize LaTeX to fix common syntax errors (pass effective language for Hindi font fixes)
+    processedLatex = sanitizeLatex(processedLatex, effectiveLanguage);
     
     if (includeSolutions) {
       // Restructure: ALL questions first, then ALL solutions at the end with proper numbering
-      processedLatex = restructureWithSolutionsAtEnd(processedLatex, language);
+      processedLatex = restructureWithSolutionsAtEnd(processedLatex, effectiveLanguage);
     } else {
       // Remove all solution sections comprehensively
       // Pattern 0: Explicit markers (High Priority)
@@ -412,7 +454,7 @@ export default async function handler(
     try {
       // For Hindi (Devanagari script), use lualatex first (supports font fallback for Latin chars)
       // For English, try pdflatex first (faster, more compatible), fallback to lualatex
-      const isHindiLang = language === 'hindi';
+      const isHindiLang = effectiveLanguage === 'hindi';
       const compilers = isHindiLang ? ['lualatex', 'xelatex'] : ['pdflatex', 'lualatex'];
       let pdfData: Buffer | null = null;
       let lastError = '';

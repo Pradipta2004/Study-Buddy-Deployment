@@ -798,11 +798,8 @@ CRITICAL PRINCIPLE #5: SOLUTION QUALITY (MANDATORY FOR ALL)
   const universalQualityDirective = enhancedUniversalDirective;
 
   // Build Hindi-specific LaTeX preamble
-  // NOTE: The sanitizeLatex function will replace the font setup with proper fallback during compilation
+  // NOTE: The sanitizeLatex function will add the proper LuaLaTeX font fallback during compilation
   const hindiLatexPreamble = isHindi ? `\\documentclass[12pt,a4paper]{article}
-\\usepackage{fontspec}
-\\setmainfont{Noto Sans Devanagari}[Renderer=HarfBuzz]
-\\renewcommand{\\labelitemi}{$\\bullet$}
 \\usepackage{amsmath}
 \\usepackage{amssymb}
 \\usepackage{geometry}

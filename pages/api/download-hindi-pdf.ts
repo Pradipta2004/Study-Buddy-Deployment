@@ -30,6 +30,10 @@ function sanitizeLatex(latex: string): string {
     return `$\\text{${content}}$`;
   });
 
+  // Normalize plain function names emitted by the model into LaTeX operators.
+  // This prevents missing output when content contains "sin x" instead of "\\sin x".
+  sanitized = sanitized.replace(/(^|[^\\])\b(sin|cos|tan|lim)\b/gim, '$1\\$2');
+
   // Remove any \tcolorbox usage
   sanitized = sanitized.replace(/\\begin\{tcolorbox\}(\[[^\]]*\])?/g, '\\begin{center}\\rule{\\textwidth}{0.4pt}');
   sanitized = sanitized.replace(/\\end\{tcolorbox\}/g, '\\rule{\\textwidth}{0.4pt}\\end{center}');
@@ -52,17 +56,38 @@ function sanitizeLatex(latex: string): string {
   sanitized = sanitized.replace(/\\setmainfont\[[^\]]*\]\{[^}]*\}\s*/g, '');
   sanitized = sanitized.replace(/\\usepackage\{fontspec\}\s*/g, '');
 
+  // Remove amsmath and amssymb — we'll add them in the proper order in the font block
+  sanitized = sanitized.replace(/\\usepackage\{amsmath\}\s*/g, '');
+  sanitized = sanitized.replace(/\\usepackage\{amssymb\}\s*/g, '');
+  sanitized = sanitized.replace(/\\usepackage\[([^\]]*)\]\{amsmath\}\s*/g, '');
+  sanitized = sanitized.replace(/\\usepackage\[([^\]]*)\]\{amssymb\}\s*/g, '');
+  sanitized = sanitized.replace(/\\usepackage\{[^}]*amsmath[^}]*\}\s*/g, '');
+  sanitized = sanitized.replace(/\\usepackage\{[^}]*amssymb[^}]*\}\s*/g, '');
+
+  // Remove previously injected operator overrides to avoid conflicts/duplication.
+  sanitized = sanitized.replace(/\\renewcommand\{\\sin\}\{[^}]*\}\s*/g, '');
+  sanitized = sanitized.replace(/\\renewcommand\{\\cos\}\{[^}]*\}\s*/g, '');
+  sanitized = sanitized.replace(/\\renewcommand\{\\tan\}\{[^}]*\}\s*/g, '');
+  sanitized = sanitized.replace(/\\renewcommand\{\\lim\}\{[^}]*\}\s*/g, '');
+  sanitized = sanitized.replace(/\\DeclareMathAlphabet\{\\mathrm\}\{[^\n]*\}\s*/g, '');
+  sanitized = sanitized.replace(/\\DeclareMathAlphabet\{\\mathit\}\{[^\n]*\}\s*/g, '');
+  sanitized = sanitized.replace(/\\DeclareMathAlphabet\{\\mathbf\}\{[^\n]*\}\s*/g, '');
+
   // Remove polyglossia language-switch commands from body text
   sanitized = sanitized.replace(/\\textenglish\{([^}]*)\}/g, '$1');
   sanitized = sanitized.replace(/\\texthi(ndi)?\{([^}]*)\}/g, '$2');
   sanitized = sanitized.replace(/\\begin\{english\}/g, '');
   sanitized = sanitized.replace(/\\end\{english\}/g, '');
 
-  // Build proper font setup with LuaLaTeX fallback for Latin characters
+  // Build proper font setup with LuaLaTeX fallback for Latin characters and math symbols.
+  // Trig/limit operator overrides are injected later (before \begin{document})
+  // so they win even if downstream packages change math font settings.
   const hindiFontBlock = [
     '\\usepackage{fontspec}',
+    '\\usepackage{amsmath}',
+    '\\usepackage{amssymb}',
     '\\ifdefined\\directlua',
-    '\\directlua{luaotfload.add_fallback("latinfb",{"lmroman10-regular:"})}',
+    '\\directlua{luaotfload.add_fallback("latinfb",{"lmroman10-regular:","LMRoman10-Regular:"})}',
     '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari,Renderer=HarfBuzz,RawFeature={fallback=latinfb}]',
     '\\else',
     '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari,Renderer=HarfBuzz]',
@@ -75,6 +100,18 @@ function sanitizeLatex(latex: string): string {
     /\\documentclass(\[[^\]]*\])?\{[^}]*\}/,
     (match) => match + '\n' + hindiFontBlock
   );
+
+  // Force robust trig/limit rendering near document start to survive later package redefinitions.
+  const operatorPatch = [
+    '\\ifdefined\\directlua',
+    '\\newfontfamily\\latinmathfont{Latin Modern Roman}[Renderer=HarfBuzz]',
+    '\\renewcommand{\\sin}{\\ensuremath{\\mathop{\\text{\\latinmathfont sin}}\\nolimits}}',
+    '\\renewcommand{\\cos}{\\ensuremath{\\mathop{\\text{\\latinmathfont cos}}\\nolimits}}',
+    '\\renewcommand{\\tan}{\\ensuremath{\\mathop{\\text{\\latinmathfont tan}}\\nolimits}}',
+    '\\renewcommand{\\lim}{\\ensuremath{\\mathop{\\text{\\latinmathfont lim}}\\nolimits}}',
+    '\\fi',
+  ].join('\\n');
+  sanitized = sanitized.replace(/\\begin\{document\}/, operatorPatch + '\n\\begin{document}');
 
   // For Hindi: replace alphabetic/roman enumerate labels with numeric
   sanitized = sanitized.replace(/label=\(\\alph\*\)/g, 'label=(\\arabic*)');
