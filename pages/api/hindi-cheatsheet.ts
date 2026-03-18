@@ -290,7 +290,8 @@ Generate a COMPLETE, COMPILABLE LaTeX document using this EXACT preamble:
 
 \\documentclass[10pt,a4paper]{article}
 \\usepackage{fontspec}
-\\setmainfont{Noto Sans Devanagari}[Script=Devanagari,Renderer=HarfBuzz]\\renewcommand{\\labelitemi}{$\\bullet$}\\usepackage[margin=1.5cm]{geometry}
+\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]
+\\usepackage[margin=1.5cm]{geometry}
 \\usepackage{amsmath,amssymb}
 \\usepackage{enumitem}
 \\usepackage{array}
@@ -386,17 +387,13 @@ FORMATTING RULES:
 8. Ensure EVERY \\begin{} has a matching \\end{}
 9. Ensure EVERY { has a matching }
 10. Use \\newpage between chapters
-11. English text mixed with Hindi is fine — Noto Sans Devanagari font supports BOTH Latin and Devanagari characters
+11. English text mixed with Hindi is fine — Noto Sans Devanagari font supports BOTH Latin and Devanagari characters with proper conjuncts
 12. Do NOT use \\textenglish{}, \\texthindi{}, or any polyglossia commands
 13. For chemical equations, use LaTeX math: $\\text{reactant} \\rightarrow \\text{product}$
 14. Do NOT use \\ce{} command (mhchem package is NOT loaded)
 15. Do NOT use tcolorbox, multicol, polyglossia, or any packages NOT in the preamble
 16. Make the document LONG and DETAILED — 40-80 pages when compiled
 17. LENGTH GUIDELINE: The output should be 40-80 pages when compiled. Do NOT shorten it. Include EVERYTHING important from the PDF.
-18. ALL numbers in visible text MUST be in Devanagari digits: १,२,३,४,५,६,७,८,९,० (NOT 1,2,3...)
-19. Only exception: numbers inside LaTeX math mode ($...$) and LaTeX command arguments should stay in English digits
-20. Option labels in lists should use Devanagari: (अ), (ब), (स), (द) — NOT (a), (b), (c), (d)
-21. Column labels should use: (१), (२), (३) — NOT (I), (II), (III) or (i), (ii), (iii)
 
 ══════════════════════════════════════════
 ⚠️ CRITICAL REMINDERS:
@@ -421,7 +418,8 @@ function wrapInLatexDocument(content: string, subject: string, studentClass: str
 
   return `\\documentclass[10pt,a4paper]{article}
 \\usepackage{fontspec}
-\\setmainfont{Noto Sans Devanagari}[Script=Devanagari,Renderer=HarfBuzz]\renewcommand{\labelitemi}{$\bullet$}\\usepackage[margin=1.5cm]{geometry}
+\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]
+\\usepackage[margin=1.5cm]{geometry}
 \\usepackage{amsmath,amssymb}
 \\usepackage{enumitem}
 \\usepackage{array}

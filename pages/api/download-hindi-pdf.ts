@@ -30,10 +30,6 @@ function sanitizeLatex(latex: string): string {
     return `$\\text{${content}}$`;
   });
 
-  // Normalize plain function names emitted by the model into LaTeX operators.
-  // This prevents missing output when content contains "sin x" instead of "\\sin x".
-  sanitized = sanitized.replace(/(^|[^\\])\b(sin|cos|tan|lim)\b/gim, '$1\\$2');
-
   // Remove any \tcolorbox usage
   sanitized = sanitized.replace(/\\begin\{tcolorbox\}(\[[^\]]*\])?/g, '\\begin{center}\\rule{\\textwidth}{0.4pt}');
   sanitized = sanitized.replace(/\\end\{tcolorbox\}/g, '\\rule{\\textwidth}{0.4pt}\\end{center}');
@@ -42,7 +38,9 @@ function sanitizeLatex(latex: string): string {
   sanitized = sanitized.replace(/\\begin\{multicols\}\{[^}]*\}/g, '');
   sanitized = sanitized.replace(/\\end\{multicols\}/g, '');
 
-  // === FIX FONT SETUP: Remove polyglossia, set up proper fallback for Latin + Devanagari ===
+  // === FIX FONT SETUP: Remove polyglossia (causes boxes/bad numbering), use Noto Sans Devanagari ===
+  // Polyglossia forces Devanagari numbering & script rules on English text → boxes. Remove it.
+  // Noto Sans Devanagari has proper conjunct/ligature OT tables AND covers Basic Latin.
   sanitized = sanitized.replace(/\\usepackage\{polyglossia\}\s*/g, '');
   sanitized = sanitized.replace(/\\setdefaultlanguage\{[^}]*\}\s*/g, '');
   sanitized = sanitized.replace(/\\setmainlanguage\{[^}]*\}\s*/g, '');
@@ -50,74 +48,22 @@ function sanitizeLatex(latex: string): string {
   sanitized = sanitized.replace(/\\newfontfamily\\hindifont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
   sanitized = sanitized.replace(/\\newfontfamily\\englishfont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
   sanitized = sanitized.replace(/\\newfontfamily\\devanagarifont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
-
-  // Remove any existing \setmainfont and \usepackage{fontspec} — we'll add our own
-  sanitized = sanitized.replace(/\\setmainfont\{[^}]*\}(\[[^\]]*\])?\s*/g, '');
-  sanitized = sanitized.replace(/\\setmainfont\[[^\]]*\]\{[^}]*\}\s*/g, '');
-  sanitized = sanitized.replace(/\\usepackage\{fontspec\}\s*/g, '');
-
-  // Remove amsmath and amssymb — we'll add them in the proper order in the font block
-  sanitized = sanitized.replace(/\\usepackage\{amsmath\}\s*/g, '');
-  sanitized = sanitized.replace(/\\usepackage\{amssymb\}\s*/g, '');
-  sanitized = sanitized.replace(/\\usepackage\[([^\]]*)\]\{amsmath\}\s*/g, '');
-  sanitized = sanitized.replace(/\\usepackage\[([^\]]*)\]\{amssymb\}\s*/g, '');
-  sanitized = sanitized.replace(/\\usepackage\{[^}]*amsmath[^}]*\}\s*/g, '');
-  sanitized = sanitized.replace(/\\usepackage\{[^}]*amssymb[^}]*\}\s*/g, '');
-
-  // Remove previously injected operator overrides to avoid conflicts/duplication.
-  sanitized = sanitized.replace(/\\renewcommand\{\\sin\}\{[^}]*\}\s*/g, '');
-  sanitized = sanitized.replace(/\\renewcommand\{\\cos\}\{[^}]*\}\s*/g, '');
-  sanitized = sanitized.replace(/\\renewcommand\{\\tan\}\{[^}]*\}\s*/g, '');
-  sanitized = sanitized.replace(/\\renewcommand\{\\lim\}\{[^}]*\}\s*/g, '');
-  sanitized = sanitized.replace(/\\DeclareMathAlphabet\{\\mathrm\}\{[^\n]*\}\s*/g, '');
-  sanitized = sanitized.replace(/\\DeclareMathAlphabet\{\\mathit\}\{[^\n]*\}\s*/g, '');
-  sanitized = sanitized.replace(/\\DeclareMathAlphabet\{\\mathbf\}\{[^\n]*\}\s*/g, '');
-
+  // Replace any \setmainfont — use Noto Sans Devanagari with HarfBuzz renderer for proper conjuncts
+  sanitized = sanitized.replace(/\\setmainfont\{[^}]*\}(\[[^\]]*\])?/g, '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
+  sanitized = sanitized.replace(/\\setmainfont\[[^\]]*\]\{[^}]*\}/g, '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
   // Remove polyglossia language-switch commands from body text
   sanitized = sanitized.replace(/\\textenglish\{([^}]*)\}/g, '$1');
   sanitized = sanitized.replace(/\\texthi(ndi)?\{([^}]*)\}/g, '$2');
   sanitized = sanitized.replace(/\\begin\{english\}/g, '');
   sanitized = sanitized.replace(/\\end\{english\}/g, '');
 
-  // Build proper font setup with LuaLaTeX fallback for Latin characters and math symbols.
-  // Trig/limit operator overrides are injected later (before \begin{document})
-  // so they win even if downstream packages change math font settings.
-  const hindiFontBlock = [
-    '\\usepackage{fontspec}',
-    '\\usepackage{amsmath}',
-    '\\usepackage{amssymb}',
-    '\\ifdefined\\directlua',
-    '\\directlua{luaotfload.add_fallback("latinfb",{"lmroman10-regular:","LMRoman10-Regular:"})}',
-    '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari,Renderer=HarfBuzz,RawFeature={fallback=latinfb}]',
-    '\\else',
-    '\\setmainfont{Noto Sans Devanagari}[Script=Devanagari,Renderer=HarfBuzz]',
-    '\\fi',
-    '\\renewcommand{\\labelitemi}{$\\bullet$}',
-  ].join('\n');
-
-  // Insert font setup after \documentclass
-  sanitized = sanitized.replace(
-    /\\documentclass(\[[^\]]*\])?\{[^}]*\}/,
-    (match) => match + '\n' + hindiFontBlock
-  );
-
-  // Force robust trig/limit rendering near document start to survive later package redefinitions.
-  const operatorPatch = [
-    '\\ifdefined\\directlua',
-    '\\newfontfamily\\latinmathfont{Latin Modern Roman}[Renderer=HarfBuzz]',
-    '\\renewcommand{\\sin}{\\ensuremath{\\mathop{\\text{\\latinmathfont sin}}\\nolimits}}',
-    '\\renewcommand{\\cos}{\\ensuremath{\\mathop{\\text{\\latinmathfont cos}}\\nolimits}}',
-    '\\renewcommand{\\tan}{\\ensuremath{\\mathop{\\text{\\latinmathfont tan}}\\nolimits}}',
-    '\\renewcommand{\\lim}{\\ensuremath{\\mathop{\\text{\\latinmathfont lim}}\\nolimits}}',
-    '\\fi',
-  ].join('\\n');
-  sanitized = sanitized.replace(/\\begin\{document\}/, operatorPatch + '\n\\begin{document}');
-
-  // For Hindi: replace alphabetic/roman enumerate labels with numeric
-  sanitized = sanitized.replace(/label=\(\\alph\*\)/g, 'label=(\\arabic*)');
-  sanitized = sanitized.replace(/label=\\alph\*\)/g, 'label=\\arabic*)');
-  sanitized = sanitized.replace(/label=\(\\roman\*\)/g, 'label=(\\arabic*)');
-  sanitized = sanitized.replace(/label=\\roman\*\)/g, 'label=\\arabic*)');
+  // Ensure \usepackage{fontspec} and \setmainfont exist
+  if (!sanitized.includes('\\usepackage{fontspec}')) {
+    sanitized = sanitized.replace(/\\documentclass(\[[^\]]*\])?\{[^}]*\}/, '$&\n\\usepackage{fontspec}\n\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
+  }
+  if (!sanitized.includes('\\setmainfont')) {
+    sanitized = sanitized.replace(/\\usepackage\{fontspec\}/, '$&\n\\setmainfont{Noto Sans Devanagari}[Script=Devanagari, Renderer=HarfBuzz]');
+  }
 
   // Ensure document has \end{document}
   if (sanitized.includes('\\begin{document}') && !sanitized.includes('\\end{document}')) {
@@ -204,8 +150,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`Hindi PDF: Compiling LaTeX (${processedLatex.length} chars) with lualatex...`);
 
-    // Compile with lualatex first (supports font fallback for Latin chars), fallback to xelatex
-    const compilers = ['lualatex', 'xelatex'];
+    // Compile with xelatex first (best for Devanagari conjuncts), fallback to lualatex
+    const compilers = ['xelatex', 'lualatex'];
     let pdfData: Buffer | null = null;
     let lastError = '';
 
