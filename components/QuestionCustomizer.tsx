@@ -427,7 +427,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
               key={subject.value}
               onClick={() => {
                 if (config.language === 'hindi' && subject.value === 'mathematics') {
-                  window.location.href = 'https://v0-next-js-website-redesign-gilt.vercel.app/';
+                  window.location.href = 'https://study-buddy-deployment-math.vercel.app';
                   return;
                 }
                 onConfigChange({ ...config, subject: subject.value });
