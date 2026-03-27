@@ -426,6 +426,10 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
             <button
               key={subject.value}
               onClick={() => {
+                if (config.language === 'hindi' && subject.value === 'mathematics') {
+                  window.location.href = 'https://v0-next-js-website-redesign-gilt.vercel.app/';
+                  return;
+                }
                 onConfigChange({ ...config, subject: subject.value });
                 goToStep('difficulty');
               }}
