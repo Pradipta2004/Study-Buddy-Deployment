@@ -262,7 +262,10 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
   function handleSwipeLeft() {
     if (step === 'language') goToStep('class');
     else if (step === 'class') goToStep('subject');
-    else if (step === 'subject') goToStep('difficulty');
+    else if (step === 'subject') {
+      if (redirectToMathSiteIfNeeded()) return;
+      goToStep('difficulty');
+    }
     else if (step === 'difficulty') goToStep('modeSelection');
     else if (step === 'modeSelection') {
       // Mode-specific navigation handled in mode selection
@@ -283,6 +286,14 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
 
   function goToStep(newStep: Step) {
     setStep(newStep);
+  }
+
+  function redirectToMathSiteIfNeeded(subject = config.subject) {
+    if (config.language === 'hindi' && subject === 'mathematics') {
+      window.location.href = 'https://study-buddy-deployment-math.vercel.app';
+      return true;
+    }
+    return false;
   }
 
   const getStepNumber = () => {
@@ -426,10 +437,7 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
             <button
               key={subject.value}
               onClick={() => {
-                if (config.language === 'hindi' && subject.value === 'mathematics') {
-                  window.location.href = 'https://study-buddy-deployment-math.vercel.app';
-                  return;
-                }
+                if (redirectToMathSiteIfNeeded(subject.value)) return;
                 onConfigChange({ ...config, subject: subject.value });
                 goToStep('difficulty');
               }}
@@ -1015,7 +1023,10 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
           onClick={() => {
             if (step === 'language') goToStep('class');
             else if (step === 'class') goToStep('subject');
-            else if (step === 'subject') goToStep('difficulty');
+            else if (step === 'subject') {
+              if (redirectToMathSiteIfNeeded()) return;
+              goToStep('difficulty');
+            }
             else if (step === 'difficulty') goToStep('modeSelection');
             else if (step === 'customize') goToStep('instructions');
             else if (step === 'instructions') goToStep('complete');
