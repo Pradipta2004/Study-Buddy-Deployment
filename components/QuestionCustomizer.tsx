@@ -289,7 +289,8 @@ export default function QuestionCustomizer({ config, onConfigChange, mode, onMod
   }
 
   function redirectToMathSiteIfNeeded(subject = config.subject) {
-    if (config.language === 'hindi' && subject === 'mathematics') {
+    const redirectSubjects = ['mathematics', 'math', 'physical-science', 'physics', 'chemistry'];
+    if (config.language === 'hindi' && redirectSubjects.includes(subject)) {
       window.location.href = 'https://study-buddy-deployment-math.vercel.app';
       return true;
     }
